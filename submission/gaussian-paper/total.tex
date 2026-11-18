@@ -1,0 +1,193 @@
+% A Gaussian Evolutionary Strategy for Binary Weight Neural Network Optimization
+% EvoStar 2027 (EvoApplications track) submission.
+%
+% Companion paper to the Bernoulli ES paper (../bernoulli-paper): same problem,
+% same evaluation protocol, but the search distribution is Gaussian over
+% continuous surrogate parameters, and perturbed parameters are quantized with
+% the sign function before every fitness evaluation.
+%
+% Build: pdflatex total && bibtex total && pdflatex total && pdflatex total
+%
+% TODO before submission:
+%   - author names, affiliations, ORCIDs (search "TODO")
+%   - acknowledgments / funding
+%   - code/data URL for the reproducibility statement
+%   - all numbers, figures, and tables (placeholders below)
+\documentclass[runningheads]{llncs}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\graphicspath{{figures/}}
+
+\begin{document}
+
+\title{A Gaussian Evolutionary Strategy for Binary Weight Neural Network Optimization}
+
+% TODO: real author names, ORCIDs and institutes
+\author{}
+\authorrunning{}
+\institute{}
+
+\maketitle
+
+% TODO: draft abstract.
+% Key points to hit:
+%   - binary weight networks: same setting as the Bernoulli paper
+%   - search distribution is Gaussian over continuous surrogate parameters
+%     (latent weights / inertia interpretation), NOT over the binary vectors
+%   - perturbed parameters are quantized with sign(), so fitness is always
+%     evaluated on a valid binary network
+%   - REINFORCE score reduces to eps/sigma (pre-quantization sampling noise)
+%   - because the search parameters are plain continuous variables updated by
+%     a scalar gradient estimate, standard optimizers such as Adam apply in
+%     exactly the same way as in the straight-through-estimator pipeline
+%   - MNIST results: population scaling, comparison to Adam-STE baseline
+\begin{abstract}
+TODO
+\keywords{Binary Weight Neural Networks \and Evolutionary Strategies \and Quantization}
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+% Structure (mirroring the Bernoulli paper, with the positioning flipped):
+%   para 1: binary weight networks, memory motivation, training via
+%           straight-through estimator (cite as in the Bernoulli paper).
+%   para 2: interpretations of surrogate parameters: inertia
+%           (Helwegen et al., latent weights) vs. Bernoulli expectations
+%           (Meng et al., Bayesian learning rule); our Bernoulli paper took
+%           the expectation interpretation literally and optimized a
+%           distribution over binary vectors directly.
+%   para 3: this work takes the inertia interpretation literally instead:
+%           maintain continuous surrogate parameters theta, perturb them with
+%           isotropic Gaussian noise, quantize sign(theta + sigma eps) for
+%           every fitness evaluation. This is an evolutionary strategy whose
+%           search distribution lives in continuous parameter space, so the
+%           latent parameters can be optimized with Adam exactly like the
+%           surrogate parameters of the STE pipeline -- connecting ES and STE
+%           practice. Positioning w.r.t. OpenAI ES (Salimans et al.) and
+%           quantized / quantization-aware ES literature.
+
+TODO
+
+\section{Binary Weight Neural Networks}
+\label{sec:BWNN}
+
+% Same as the Bernoulli paper: sign-mapped binary weights, per-layer scale
+% sqrt(2)/sqrt(n_in) replacing batch normalization for ReLU networks, fitness
+% = negative categorical cross-entropy on random mini-batches.
+% Reuse that text with light edits.
+
+TODO
+
+\section{Gaussian Evolutionary Strategy}
+\label{sec:GES}
+
+% Derivation sketch (to be written out in full):
+%
+% Search parameters: continuous vector theta in R^D (the surrogate/latent
+% parameters). Sampling: x_i = theta + sigma*eps_i, eps_i ~ N(0, I_D).
+% Quantization: the network weights of individual i are w_i = sign(x_i), so
+% every fitness evaluation is on a valid binary network and the fitness
+% function f: {-1,+1}^D -> R is exactly the same black box as in the Bernoulli
+% paper.
+%
+% Objective: J(theta) = E_{eps}[ f(sign(theta + sigma eps)) ].
+% J is smooth in theta through the sampling noise.
+%
+% REINFORCE gradient:
+%   nabla_theta log N(x_i; theta, sigma^2 I) = (x_i - theta)/sigma^2 = eps_i/sigma,
+% so the population-summed update is
+%   theta <- theta + eta/(P sigma) * sum_i u_i eps_i
+% with shaped fitness u_i. Note the score does not depend on the network at
+% all: only the pre-quantization sampling noise enters the estimator.
+%
+% Points to work out in the text:
+%   - sign(0) convention: locked decision -- the search parameters are
+%     initialized from a zero-mean Gaussian N(0, init_std^2), so exact zeros
+%     (where the sign map is undefined) have measure zero; bits are quantized
+%     as x > 0. init_std is a new hyperparameter relative to the Bernoulli
+%     paper (default 1.0; with init_std = sigma the initial perturbation flip
+%     probability is ~50%).
+%   - sigma: LOCKED as a shared fixed scale (no per-coordinate sigma_j);
+%     commitment/saturation is then governed by |theta_j|/sigma growth
+%   - antithetic sampling is implemented (eps paired with -eps) but default
+%     off and not studied in this paper
+%   - optimizer preprocessing: because the update is a plain additive
+%     continuous gradient, Adam/momentum apply unchanged -- the algorithm is
+%     "STE with the gradient replaced by a REINFORCE estimate", which is the
+%     headline connection
+%   - memory/cost parity w.r.t. the Bernoulli ES: the Bernoulli sampler also
+%     generates a (P, D) float tensor per generation (it just never keeps it),
+%     so sampling cost is the same; the only Gaussian-specific cost is
+%     re-drawing the noise at update time, made exact by replaying the same
+%     per-generation seeded stream chunk-by-chunk (no (P, D) float is ever
+%     materialized whole) -- worth a remark, not a section
+%   - relation to the Bernoulli ES: the induced bit distribution is a product
+%     of Bernoullis with rates p_j = Phi(theta_j/sigma) (erf), i.e. the same
+%     Bernoulli family under a monotone logit reparameterisation -- the two
+%     algorithms differ in parameterisation, score function (eps/sigma vs the
+%     bounded x - s), and convergence dynamics (commitment appears as
+%     |theta_j| >> sigma growth instead of logit saturation); diagnostics
+%     (entropy, committed fraction, per-layer histograms over p_j) are
+%     computed identically to the Bernoulli paper, giving direct figure parity
+
+TODO
+
+\section{Methods}
+\label{sec:methods}
+
+% Same protocol as the Bernoulli paper (MNIST 54k/6k/10k split, standardised
+% inputs, fully connected ReLU MLP with pre-activation scaling, no biases,
+% fitness = negative CE on random 4096-sample mini-batches, mode-network
+% validation evals every 10 iterations, test at end of training).
+%
+% TODO: decide and record the experimental grid:
+%   - sigma (shared fixed; maybe a small sigma sweep)
+%   - population sizes, learning rates, Adam vs. plain update for the ES
+%   - antithetic on/off
+%   - shaping: rank / standardize / none (pick one as default)
+%   - architecture, seeds, iterations (match Bernoulli paper: h256x2,
+%     5 seeds, 2000 it pop sweep, 5000 it traces)
+%   - Adam-STE baseline: Larq, same arch, Adam 1e-3, batch 512, 100 epochs
+
+TODO
+
+\section{Results}
+\label{sec:results}
+
+% Planned figures/tables (placeholders):
+%   - fig_pop_scaling: val/test accuracy + entropy vs. population size
+%   - fig_val_traces: per-seed validation traces
+%   - theta/|theta| histograms per layer over training: saturation as
+%     |theta_j|/sigma growth (the Gaussian analogue of the Bernoulli
+%     expectation histograms)
+%   - table: Gaussian ES vs. Adam-STE vs. (optionally) Bernoulli ES numbers
+
+TODO
+
+\section{Discussion}
+\label{sec:discussion}
+
+TODO
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+TODO
+
+\begin{credits}
+% TODO: funding/acknowledgments or remove
+
+\subsubsection{\discintname}
+The authors have no competing interests to declare that are relevant to the
+content of this article.
+\end{credits}
+
+\bibliographystyle{splncs04}
+\bibliography{refs}
+
+\end{document}

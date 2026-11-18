@@ -9,7 +9,11 @@
 # lr rule: lr = 100/P. Each run skips itself if its output JSON exists.
 set -u
 cd "$(dirname "$0")/.."
-PY=/data/ste/venv/bin/python
+PY=${PY:-/data/ste/venv/bin/python}
+if ! command -v "$PY" >/dev/null 2>&1; then
+  echo "interpreter not found: $PY" >&2
+  exit 2
+fi
 export PYTHONUNBUFFERED=1
 COMMON_ES="--hidden 256 --layers 2 --scale he --activation relu --fitness loss --loss ce --sigma 0 --table-rows 0 --chunk 512 --grad-chunk 64 --pop-chunk 128 --eval-every 10 --diagnostics"
 

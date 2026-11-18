@@ -1,8 +1,8 @@
-"""Figures for the h256x2 population/convergence plan (rank + shaping stages).
+"""Figures for a population/convergence plan (rank + shaping stages).
 
 Reads the diagnostic run JSONs written by ``experiments/run_es.py
---diagnostics`` for the paper plan and writes PDF+PNG pairs into the output
-directory (default ``figures/convergence/``):
+--diagnostics`` and writes PDF+PNG pairs into the output directory (default
+``figures/convergence/``):
 
 - fig_pop_scaling  final val/test accuracy vs population (log-x, 5-seed
   error bars) and per-bit entropy traces vs iteration, one curve per
@@ -17,6 +17,7 @@ directory (default ``figures/convergence/``):
 Usage:
   /path/to/python experiments/plot_convergence.py \
       [--in-dir results] [--out-dir figures/convergence] [--tag h256x2]
+      [--pattern GLOB] [--iterations 2000] [--hist-cols 1,50,500,2000]
 """
 
 import argparse
@@ -49,16 +50,18 @@ def parse_args():
                    help="figure directory (default: <repo>/figures/convergence)")
     p.add_argument("--tag", default="h256x2",
                    help="filename tag of the plan runs (es_<tag>_...)")
+    p.add_argument("--pattern", default=None,
+                   help="glob for run JSONs (default: "
+                        "*<tag>*_p*_lr*_seed*_t0_diag<iterations>.json)")
     p.add_argument("--iterations", type=int, default=2000)
     p.add_argument("--hist-cols", default="1,50,500,2000",
                    help="snapshot iterations shown in fig_p_hist")
     return p.parse_args()
 
 
-def load_arms(in_dir, tag, iterations):
-    """-> {shaping: {population: [record, ...]}} for diagnostic 2000-it runs."""
+def load_arms(in_dir, pattern, iterations):
+    """-> {shaping: {population: [record, ...]}} for diagnostic runs."""
     arms = defaultdict(lambda: defaultdict(list))
-    pattern = f"*{tag}*_p*_lr*_seed*_t0_diag{iterations}.json"
     for path in sorted(Path(in_dir).glob(pattern)):
         rec = json.loads(path.read_text())
         cfg = rec["config"]
@@ -214,13 +217,22 @@ def main():
     in_dir = Path(args.in_dir) if args.in_dir else ROOT / "results"
     out_dir = Path(args.out_dir) if args.out_dir else ROOT / "figures" / "convergence"
     out_dir.mkdir(parents=True, exist_ok=True)
-    arms = load_arms(in_dir, args.tag, args.iterations)
+    pattern = args.pattern or (
+        f"*{args.tag}*_p*_lr*_seed*_t0_diag{args.iterations}.json")
+    arms = load_arms(in_dir, pattern, args.iterations)
     if not arms:
-        raise SystemExit(f"no diagnostic run JSONs for tag {args.tag} under "
-                         f"{in_dir}")
+        raise SystemExit(f"no diagnostic run JSONs matching {pattern!r} "
+                         f"under {in_dir}")
     for shape in sorted(arms):
         print(f"arm '{shape}': populations "
               + str({p: len(r) for p, r in sorted(arms[shape].items())}))
+    all_runs = [r for by_pop in arms.values()
+                for runs in by_pop.values() for r in runs]
+    for field in ("hidden", "layers", "scale", "activation"):
+        values = {r.get("config", {}).get(field) for r in all_runs}
+        if len(values) > 1:
+            print(f"warning: matched runs have mixed {field}: "
+                  f"{sorted(values, key=str)}")
 
     rank = arms.get("rank") or next(iter(arms.values()))
 

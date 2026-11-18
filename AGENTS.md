@@ -192,7 +192,8 @@
   (`results/es_loss_ce_h1024x1_he_relu_p100_lr1.0_bl0.001_seed42_t0_shstandardize_20261111_221949.json`).
 - `bes/mlp.py`: `num_bits`, `weight_shapes`, `bias_shapes`, `num_bias`, `split_weights`,
   `split_biases`, `quantise_input`, `population_metrics` (sample-chunked, default
-  `chunk_size` 8192; `pop_chunk=` population-axis chunking, row-exact), `net_logits`.
+  `chunk_size` 8192; `pop_chunk=` population-axis chunking, row-exact),
+  `net_probs` (backward-compatible alias `net_logits`).
   NOTE: `quantise_input` is a helper only used by `tests/test_gradient.py` — the
   ES/MGA fitness and mode-net evals feed the RAW normalised pixels to the forward
   (full-precision input × ±1 weights); only the larq STE pipeline binarises inputs

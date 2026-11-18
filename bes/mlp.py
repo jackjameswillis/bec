@@ -175,8 +175,11 @@ def population_metrics(bits, x, y, chunk_size=8192, shapes=None, loss="ce", bias
     return tf.concat(loss_all, axis=0), tf.concat(acc_all, axis=0)
 
 
-def net_logits(bits, x, shapes=None, bias=None, scale="fixed", activation="sign"):
-    """Softmax probabilities of one net (kept name for backwards compatibility)."""
+def net_probs(bits, x, shapes=None, bias=None, scale="fixed", activation="sign"):
+    """Softmax probabilities of one net."""
     _, weights = split_weights(tf.expand_dims(bits, 0), shapes)
     biases = split_biases(bias, shapes) if bias is not None else None
     return tf.nn.softmax(_forward_chunk(weights, biases, x, scale, activation), axis=-1)
+
+
+net_logits = net_probs

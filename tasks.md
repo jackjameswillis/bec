@@ -37,9 +37,9 @@ plot-script fixes, dead-code removal, and documentation corrections.
       `--scale != none`: biases are now added after the per-layer scale.
 - [x] Improve `run_ste.py` output provenance: default filenames now include
       learning rate, epochs, and batch size.
-- [ ] Consider renaming `bes/mlp.net_logits` (it returns softmax probabilities)
-      or add a backward-compatible alias.
-- [ ] Clean old theta `.npz` archives that still contain unused `mode_it_*`
+- [x] Rename `bes/mlp.net_logits` (it returns softmax probabilities) to
+      `net_probs`, keeping `net_logits` as a backward-compatible alias.
+- [x] Clean old theta `.npz` archives that still contain unused `mode_it_*`
       arrays from before the theta-dump cleanup.
 
 ## Low priority

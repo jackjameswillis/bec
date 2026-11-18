@@ -55,6 +55,7 @@ def build_reference_multi(weights, biases, scale="fixed", relu=False):
 
 
 def main():
+    assert mlp.net_logits is mlp.net_probs
     rng = np.random.default_rng(7)
     input_dim, hidden, classes = 7, 5, 3
     shapes = ((input_dim, hidden), (hidden, classes))
@@ -68,14 +69,14 @@ def main():
 
     x = rng.normal(size=(64, input_dim)).astype("float32")
     ref = build_reference(w1, w2, b1, b2)(tf.convert_to_tensor(x))
-    ours = mlp.net_logits(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias)
+    ours = mlp.net_probs(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias)
 
     assert ref.shape == ours.shape, (ref.shape, ours.shape)
     np.testing.assert_allclose(ref.numpy(), ours.numpy(), rtol=1e-5, atol=1e-6)
     print("forward parity OK: max abs diff", float(np.abs(ref.numpy() - ours.numpy()).max()))
 
     ref_nos = build_reference(w1, w2, b1, b2, scale="none")(tf.convert_to_tensor(x))
-    ours_nos = mlp.net_logits(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias,
+    ours_nos = mlp.net_probs(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias,
                               scale="none")
     np.testing.assert_allclose(ref_nos.numpy(), ours_nos.numpy(), rtol=1e-5, atol=1e-6)
     print("no-scale forward parity OK: max abs diff",
@@ -83,7 +84,7 @@ def main():
 
     ref_he = build_reference(w1, w2, b1, b2, scale="he", relu=True)(
         tf.convert_to_tensor(x))
-    ours_he = mlp.net_logits(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias,
+    ours_he = mlp.net_probs(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias,
                              scale="he", activation="relu")
     np.testing.assert_allclose(ref_he.numpy(), ours_he.numpy(), rtol=1e-5, atol=1e-6)
     print("relu he-scale forward parity OK: max abs diff",
@@ -91,7 +92,7 @@ def main():
 
     ref_relu = build_reference(w1, w2, b1, b2, scale="none", relu=True)(
         tf.convert_to_tensor(x))
-    ours_relu = mlp.net_logits(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias,
+    ours_relu = mlp.net_probs(bits, tf.convert_to_tensor(x), shapes=shapes, bias=bias,
                                scale="none", activation="relu")
     np.testing.assert_allclose(ref_relu.numpy(), ours_relu.numpy(), rtol=1e-5, atol=1e-6)
     print("relu no-scale forward parity OK: max abs diff",
@@ -107,14 +108,14 @@ def main():
                     tf.float32)
     biases3 = mlp.split_biases(bias3, shapes3)
     ref3 = build_reference_multi(weights3, biases3)(tf.convert_to_tensor(x))
-    ours3 = mlp.net_logits(bits3, tf.convert_to_tensor(x), shapes=shapes3, bias=bias3)
+    ours3 = mlp.net_probs(bits3, tf.convert_to_tensor(x), shapes=shapes3, bias=bias3)
     np.testing.assert_allclose(ref3.numpy(), ours3.numpy(), rtol=1e-5, atol=1e-6)
     print("multi-hidden-layer (3 layers) forward parity OK: max abs diff",
           float(np.abs(ref3.numpy() - ours3.numpy()).max()))
 
     ref3_nos = build_reference_multi(weights3, biases3, scale="none", relu=True)(
         tf.convert_to_tensor(x))
-    ours3_nos = mlp.net_logits(bits3, tf.convert_to_tensor(x), shapes=shapes3, bias=bias3,
+    ours3_nos = mlp.net_probs(bits3, tf.convert_to_tensor(x), shapes=shapes3, bias=bias3,
                                scale="none", activation="relu")
     np.testing.assert_allclose(ref3_nos.numpy(), ours3_nos.numpy(), rtol=1e-5, atol=1e-6)
     print("multi-hidden-layer relu no-scale forward parity OK: max abs diff",
@@ -122,7 +123,7 @@ def main():
 
     ref3_he = build_reference_multi(weights3, biases3, scale="he", relu=True)(
         tf.convert_to_tensor(x))
-    ours3_he = mlp.net_logits(bits3, tf.convert_to_tensor(x), shapes=shapes3, bias=bias3,
+    ours3_he = mlp.net_probs(bits3, tf.convert_to_tensor(x), shapes=shapes3, bias=bias3,
                               scale="he", activation="relu")
     np.testing.assert_allclose(ref3_he.numpy(), ours3_he.numpy(), rtol=1e-5, atol=1e-6)
     print("multi-hidden-layer relu he-scale forward parity OK: max abs diff",

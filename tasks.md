@@ -33,9 +33,8 @@ plot-script fixes, dead-code removal, and documentation corrections.
       `(P, P)` reference.
 - Dropped: guard perturbation-table memory; an OOM crash is an acceptable
       failure mode.
-- [ ] Decide whether STE `--use-bias` should match the ES forward exactly for
-      `--scale != none` (currently the STE bias is applied before the Lambda
-      scale; the caveat is documented, not fixed).
+- [x] Make STE `--use-bias` match the ES forward exactly for
+      `--scale != none`: biases are now added after the per-layer scale.
 - [ ] Improve `run_ste.py` output provenance: filenames omit learning rate,
       epochs, and batch size; add them or rely less on filenames.
 - [ ] Consider renaming `bes/mlp.net_logits` (it returns softmax probabilities)

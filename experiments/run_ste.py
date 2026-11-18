@@ -61,9 +61,8 @@ def main():
                         help="skip the ste_sign input binarisation: the first layer "
                              "takes the raw normalised pixels (full precision)")
     parser.add_argument("--use-bias", action="store_true",
-                        help="include biases (original /data/ste behaviour); default no "
-                             "biases. With --scale != none the bias is applied before "
-                             "the scale, unlike the ES forward's post-scale bias")
+                        help="include biases after each per-layer pre-activation "
+                             "scale, matching the ES forward; default no biases")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", type=str, default=None)
     args = parser.parse_args()

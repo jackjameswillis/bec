@@ -13,7 +13,9 @@ momentum, categorical cross-entropy, no label smoothing.
 
 Locked design decision "no biases for now" is applied as the default
 (``use_bias=False``) so STE and the soft ES optimise the same hypothesis
-space; pass ``use_bias=True`` to reproduce the original script exactly.
+space; pass ``use_bias=True`` to add biases after each per-layer
+pre-activation scale, matching the ES forward (with ``scale="none"`` this is
+the original script's bias placement).
 """
 
 import tensorflow as tf
@@ -33,11 +35,26 @@ INPUT_QUANTIZER = "ste_sign"
 KERNEL_QUANTIZER = "ste_sign"
 
 
+class Bias(tf.keras.layers.Layer):
+    """Trainable per-output bias added after the pre-activation scale."""
+
+    def __init__(self, units, **kwargs):
+        super().__init__(**kwargs)
+        self.units = int(units)
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        self.bias = self.add_weight(
+            name="bias", shape=(self.units,), initializer="zeros",
+            trainable=True,
+        )
+
+    def call(self, inputs):
+        return inputs + self.bias
+
+
 def build_model(learning_rate=1e-3, use_bias=False, hidden_units=HIDDEN_UNITS,
                 hidden_layers=1, scale="none", optimizer="sgd", input_quant=True):
-    # NOTE: with scale != "none" a nonzero bias is applied before the Lambda
-    # scale (inside QuantDense), whereas bes/mlp.py adds biases after the
-    # scale. The locked recipes use no biases; this only affects --use-bias.
     c_in = mlp._scale(INPUT_DIM, scale)
     c_h = mlp._scale(hidden_units, scale)
     layers = [Input(shape=(INPUT_DIM,))]
@@ -51,24 +68,29 @@ def build_model(learning_rate=1e-3, use_bias=False, hidden_units=HIDDEN_UNITS,
                 input_quantizer=INPUT_QUANTIZER if i == 0 and input_quant else None,
                 kernel_quantizer=KERNEL_QUANTIZER,
                 kernel_constraint="weight_clip",
-                activation="relu",
-                use_bias=use_bias,
+                activation=None if use_bias else "relu",
+                use_bias=False,
             )
         )
         if scale != "none":
             # relu-positive-homogeneity makes post-relu scaling equivalent to
             # the ES forward's per-layer pre-activation scale
             layers.append(Lambda(lambda t, c=c_in if i == 0 else c_h: t * c))
+        if use_bias:
+            layers.append(Bias(hidden_units))
+            layers.append(tf.keras.layers.Activation("relu"))
     layers.append(
         QuantDense(
             NUM_CLASSES,
             kernel_quantizer=KERNEL_QUANTIZER,
             kernel_constraint="weight_clip",
-            use_bias=use_bias,
+            use_bias=False,
         )
     )
     if scale != "none":
         layers.append(Lambda(lambda t, c=c_h: t * c))
+    if use_bias:
+        layers.append(Bias(NUM_CLASSES))
     layers.append(tf.keras.layers.Activation("softmax"))
     model = Sequential(layers)
     if optimizer == "sgd":

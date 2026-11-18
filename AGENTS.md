@@ -28,6 +28,7 @@
   - `/data/ste/venv/bin/python tests/run_all.py` — run every `tests/test_*.py` script sequentially in fresh processes and summarise (OK, ~94 s)
   - `/data/ste/venv/bin/python tests/test_entrypoints.py` — `--help` smoke checks for runner/plot CLIs plus tiny ES/GES/MGA runs and history-ordering invariant (OK)
   - `/data/ste/venv/bin/python tests/test_resume.py` — sweep resume-cache config matching (OK)
+  - `/data/ste/venv/bin/python tests/test_ste_bias.py` — STE `--use-bias` forward parity vs the ES model across scale modes (OK; sets legacy Keras internally)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
   - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the old `(P, P)` reference across sizes/ties (OK)
   - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)
@@ -206,7 +207,9 @@
 - `bes/ste.py`: larq `QuantDense` with `input_quantizer="ste_sign"`,
   `kernel_quantizer="ste_sign"`, `kernel_constraint="weight_clip"`; SGD lr 1e-3,
   momentum 0, categorical CE, no label smoothing, batch 512, 25 epochs.
-  `use_bias=False` default; `run_ste.py --use-bias` restores the original script.
+  `use_bias=False` default; `run_ste.py --use-bias` adds biases after each
+  per-layer pre-activation scale, matching the ES forward (`scale="none"`
+  reduces to the original script's bias placement).
   `--hidden` flag (added 2026-11-11) sets the hidden width. h1024 runs
   (2026-11-11): no-bias val 0.9267 / test 0.9140, with-bias val 0.9240 /
   test 0.9140 — (a) the ES recipe (standardize, lr 1, 1000 it: 0.9577/0.9485)

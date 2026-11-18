@@ -35,8 +35,8 @@ plot-script fixes, dead-code removal, and documentation corrections.
       failure mode.
 - [x] Make STE `--use-bias` match the ES forward exactly for
       `--scale != none`: biases are now added after the per-layer scale.
-- [ ] Improve `run_ste.py` output provenance: filenames omit learning rate,
-      epochs, and batch size; add them or rely less on filenames.
+- [x] Improve `run_ste.py` output provenance: default filenames now include
+      learning rate, epochs, and batch size.
 - [ ] Consider renaming `bes/mlp.net_logits` (it returns softmax probabilities)
       or add a backward-compatible alias.
 - [ ] Clean old theta `.npz` archives that still contain unused `mode_it_*`
@@ -54,7 +54,5 @@ plot-script fixes, dead-code removal, and documentation corrections.
       `submission/gaussian-paper/total.tex` and remove any stale generated PDFs.
 - [ ] Generate and archive the missing `mga_sweep_exact_h1024` figures, or drop
       the reference from the results documentation if figures are not wanted.
-- [ ] Consider a small compatibility test for the changed default output
-      filenames (now include `_s{sigma}` and `_it{iterations}` in `run_es` /
-      `run_ges`) and update any external notes or scripts that assume the old
-      names.
+- [x] Add a compatibility test for the changed default output filenames
+      (now include `_s{sigma}` and `_it{iterations}` in `run_es` / `run_ges`).

@@ -25,6 +25,7 @@ from bes.algs.ges import GaussianES
 from experiments._common import (
     load_splits, make_fitness, make_shapes, run_search, validate_args,
 )
+from experiments._names import ges_stem
 
 
 def main():
@@ -115,16 +116,7 @@ def main():
 
     layer_sizes = [int(i * o) for i, o in shapes]
     assert sum(layer_sizes) == num_bits
-    out_stem = (
-        f"ges_{args.fitness}_{args.loss}_h{args.hidden}x{args.layers}"
-        f"_{args.scale}_{args.activation}_p{args.population}_lr{args.lr}"
-        f"_s{args.sigma}_is{args.init_std}"
-        f"_seed{args.seed}_it{args.iterations}"
-        f"_t{args.table_rows}{'_anti' if args.antithetic else ''}"
-        f"{'_sh' + args.shaping if args.shaping != 'none' else ''}"
-        f"{'_adam' if args.adam else ''}"
-        f"{'_diag' if args.diagnostics else ''}"
-    )
+    out_stem = ges_stem(args)
     run_search(ges, args, fitness_fn, x_val, y_val, x_test, y_test,
                shapes, layer_sizes, method="ges", bias=False,
                extra_diag=True, out_stem=out_stem, started=started)

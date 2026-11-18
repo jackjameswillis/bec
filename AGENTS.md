@@ -29,6 +29,7 @@
   - `/data/ste/venv/bin/python tests/test_entrypoints.py` — `--help` smoke checks for runner/plot CLIs plus tiny ES/GES/MGA runs and history-ordering invariant (OK)
   - `/data/ste/venv/bin/python tests/test_resume.py` — sweep resume-cache config matching (OK)
   - `/data/ste/venv/bin/python tests/test_ste_bias.py` — STE `--use-bias` forward parity vs the ES model across scale modes (OK; sets legacy Keras internally)
+  - `/data/ste/venv/bin/python tests/test_output_names.py` — default ES/GES/STE output-stem compatibility (OK)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
   - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the old `(P, P)` reference across sizes/ties (OK)
   - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)
@@ -36,7 +37,7 @@
   - `/data/ste/venv/bin/python tests/test_mga.py` — MicrobialGA pairing/tournament operators (OK)
   - `/data/ste/venv/bin/python tests/test_fitness.py` — BNNFitness batch schedules: cycle (mgab protocol) + random (OK)
   - `/data/ste/venv/bin/python tests/test_forward.py` — BNN forward/loss parity vs hand-rolled reference, fixed/he/none scale modes (pure TF, never imports larq; OK)
-- STE baseline: `cd /data/bes && TF_USE_LEGACY_KERAS=1 /data/ste/venv/bin/python experiments/run_ste.py [--epochs 25] [--batch-size 512] [--learning-rate 0.001] [--hidden 64] [--layers 1] [--scale none|fixed|he] [--eval-every N] [--optimizer sgd|adam] [--no-input-quant] [--use-bias] [--seed 42] [--out PATH]`
+- STE baseline: `cd /data/bes && TF_USE_LEGACY_KERAS=1 /data/ste/venv/bin/python experiments/run_ste.py [--epochs 25] [--batch-size 512] [--learning-rate 0.001] [--hidden 64] [--layers 1] [--scale none|fixed|he] [--eval-every N] [--optimizer sgd|adam] [--no-input-quant] [--use-bias] [--seed 42] [--out PATH]` (default result stems include lr, epochs, and batch size)
 - Soft ES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_es.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 0.1] [--shaping none|standardize|rank] [--bias-lr LR] [--adam] [--grad-chunk K] [--natural] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--scale fixed|he|none`, `--activation sign|relu`, `--chunk 8192` (sample chunk; GPU memory lever for wide nets — h1024 pop-100 needs `--chunk 1024` or 512)
 - Gaussian ES (sign-quantized, `submission/gaussian-paper`): `cd /data/bes && /data/ste/venv/bin/python experiments/run_ges.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 1.0] [--init-std 1.0] [--shaping none|standardize|rank] [--adam] [--grad-chunk K] [--out PATH]` plus `--hidden/--layers/--scale/--activation/--chunk/--pop-chunk/--diagnostics/--save-theta` (same semantics as run_es.py; no biases — weights-only, fitness gets `bias=None`)
 - Microbial GA: `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga.py [--population 100] [--deme 2] [--crossrate 0.5] [--mutation-rate 0.001] [--bias-std 0.01] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--scale fixed|he|none] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--activation sign|relu`, `--chunk 8192`, `--pop-chunk 0`
@@ -278,6 +279,8 @@
 - `experiments/_common.py`: shared runner plumbing — split loading, shape/fitness
   construction, per-individual and final split metrics, snapshot-step selection,
   theta dumping, and common CLI validation.
+- `experiments/_names.py`: shared default output-stem builders for `run_es.py`,
+  `run_ges.py`, and `run_ste.py`.
 - `bes/algs/es.py`: SoftES — Bernoulli logit `p(z=+1) = sigmoid(theta)` over weight
   bits; continuous bias coordinates as Gaussian means `theta_bias` (fixed perturbation
   scale `sigma`; `sigma=0` disables bias learning — biases frozen at 0, update skips

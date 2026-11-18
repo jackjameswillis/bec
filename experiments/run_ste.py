@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import tensorflow as tf
 
 from bes import data, ste
+from experiments._names import ste_stem
 
 
 class EvalCallback(tf.keras.callbacks.Callback):
@@ -95,13 +96,10 @@ def main():
         "test": {"loss": float(test_loss), "accuracy": float(test_acc)},
         "wall_time_s": time.time() - started,
     }
-    out = Path(args.out) if args.out else Path(__file__).resolve().parents[1] / "results" / (
-        f"ste_h{args.hidden}{'x' + str(args.layers) if args.layers != 1 else ''}"
-        f"{'_' + args.scale if args.scale != 'none' else ''}"
-        f"{'_' + args.optimizer if args.optimizer != 'sgd' else ''}"
-        f"{'_noiq' if args.no_input_quant else ''}"
-        f"{'_bias' if args.use_bias else ''}_seed{args.seed}"
-        f"_{time.strftime('%Y%m%d_%H%M%S')}.json"
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    out = Path(args.out) if args.out else (
+        Path(__file__).resolve().parents[1] / "results"
+        / f"{ste_stem(args, timestamp)}.json"
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(record, indent=2))

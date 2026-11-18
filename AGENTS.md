@@ -25,6 +25,8 @@
 ## Commands
 
 - Tests (no pytest installed; plain scripts with `main()` + `if __name__ == "__main__"`):
+  - `/data/ste/venv/bin/python tests/run_all.py` — run every `tests/test_*.py` script sequentially in fresh processes and summarise (OK, ~94 s)
+  - `/data/ste/venv/bin/python tests/test_entrypoints.py` — `--help` smoke checks for runner/plot CLIs plus tiny ES/GES/MGA runs and history-ordering invariant (OK)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
   - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity (OK)
   - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)

@@ -14,7 +14,7 @@ plot-script fixes, dead-code removal, and documentation corrections.
       run a short seed-matched recipe (h256x2, p2048, rank, 200 it) and compare
       history, diagnostics, snapshots, and step-200 metrics with the archived
       JSON; all match exactly.
-- [ ] Add an aggregate test runner (`tests/run_all.py`) and optional smoke tests
+- [x] Add an aggregate test runner (`tests/run_all.py`) and optional smoke tests
       for the runner/plotting entry points; there is still no CI or test runner.
 - [ ] Prune or archive `results/`: 67 MB, ~296 JSON files, duplicate logs and
       old timestamped variants. Decide whether any summaries/figures should be

@@ -4,6 +4,7 @@ venv/
 results/*
 figures/*
 !results/.gitkeep
+!results/README.md
 !figures/.gitkeep
 .DS_Store
 submission/*/*.aux

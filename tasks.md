@@ -17,12 +17,11 @@ plot-script fixes, dead-code removal, and documentation corrections.
 - [x] Add an aggregate test runner (`tests/run_all.py`) and optional smoke tests
       for the runner/plotting entry points; no CI, but local `tests/run_all.py`
       now exists.
-- [ ] Prune or archive `results/`: 67 MB, ~296 JSON files, duplicate logs and
-      old timestamped variants. Decide whether any summaries/figures should be
-      tracked despite the current `.gitignore`.
-- [ ] Audit `AGENTS.md` again after the code refactor. It is ~37 KB and mixes
-      commands, architecture, and experiment history; consider splitting or
-      trimming it now that shared modules and defaults changed.
+- [x] Prune or archive `results/`: full archive at
+      `/data/bes_results_archive_20261118.tar.zst`; only paper-used runs and
+      figures retained, indexed in `results/README.md`.
+- [x] Audit `AGENTS.md` after the code refactor: operational guidance is now
+      concise in `AGENTS.md`, detailed history lives in `docs/experiments.md`.
 
 ## Medium priority
 
@@ -49,11 +48,14 @@ plot-script fixes, dead-code removal, and documentation corrections.
       and falls back to `/data/ste/venv/bin/python`.
 - [x] `plot_convergence.py` and `plot_long_ste.py` accept pattern/glob overrides;
       long-run labels and titles derive from the loaded configs.
-- [ ] Deduplicate `submission/bernoulli-paper` and `submission/gaussian-paper`
-      LaTeX assets (`llncs.cls`, `splncs04.bst`, `refs.bib`).
-- [ ] Fill in or remove the remaining `TODO` placeholders in
-      `submission/gaussian-paper/total.tex` and remove any stale generated PDFs.
 - Dropped: generate the missing `mga_sweep_exact_h1024` figures; update or
       remove the documentation reference during the `AGENTS.md` audit.
 - [x] Add a compatibility test for the changed default output filenames
       (now include `_s{sigma}` and `_it{iterations}` in `run_es` / `run_ges`).
+
+## Deferred
+
+- [ ] Deduplicate `submission/bernoulli-paper` and `submission/gaussian-paper`
+      LaTeX assets (`llncs.cls`, `splncs04.bst`, `refs.bib`).
+- [ ] Fill in or remove the remaining `TODO` placeholders in
+      `submission/gaussian-paper/total.tex` and remove any stale generated PDFs.

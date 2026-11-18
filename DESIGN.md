@@ -55,7 +55,7 @@ Two optimisation methods to compare on binary neural networks:
 
 - MNIST. Soft ES vs STE. Claim: ES reaches performance comparable to STE on binary BNN optimisation.
 - **Deme-size × crossrate sweep (MGA, "Arc 1" reproduction of `/data/mgab/pilot_sweep.py`):** MNIST, pop 256, fitness batch 512 (cycling mini-batch protocol), mutation rate 1e-5, bias std 1e-5, 1000 iterations, 3 seeds; grid = ring deme sizes {2,4,8,16,32,64,128,256} × crossrates {0.5, 1.0}. Hypothesis under test (mgab): restrictive ring geography improves accuracy and stability (fully-mixed matching = worst; deme-2 the most stable). Runner `experiments/run_mga_sweep.py`, figures `experiments/plot_mga_sweep.py` (trace + peak/collapse heatmap). Deviations from the mgab data are documented in the sweep-script docstring; mgab's recorded grid itself was a patchwork of iteration counts/mutation settings across crossrate cells.
-- **Forward-mode axis (`--scale fixed|he|none`):** bes default = sign hidden activations with fixed 1/√(in_dim) pre-activation scaling; `he` = √(2/in_dim) per layer (He-style: with binary ±1 weights and ReLU hidden units the variance-stable scale is √2× the sign-net one — `E[x²]₊₁ = c²·fan_in·E[x²]/2` exactly, since symmetric ±1 weights zero out the mean term and make `E[relu(s)²] = E[s²]/2` exact); `none` = unscaled logits for mgab `r='linear'` parity. The recorded mgab data used ReLU hidden activations with no scaling — not bit-comparable to either mode; flagged in the paper comparison. First cr=1.0 sweep ran with `scale="fixed"` (partial archive in `results/mga_sweep_fixed_scale/`, demes 2–8 complete); re-run in progress with `scale="none"`.
+- **Forward-mode axis (`--scale fixed|he|none`):** bes default = sign hidden activations with fixed 1/√(in_dim) pre-activation scaling; `he` = √(2/in_dim) per layer (He-style: with binary ±1 weights and ReLU hidden units the variance-stable scale is √2× the sign-net one — `E[x²]₊₁ = c²·fan_in·E[x²]/2` exactly, since symmetric ±1 weights zero out the mean term and make `E[relu(s)²] = E[s²]/2` exact); `none` = unscaled logits for mgab `r='linear'` parity. The recorded mgab data used ReLU hidden activations with no scaling — not bit-comparable to either mode; flagged in the paper comparison. First cr=1.0 sweep ran with `scale="fixed"` (partial archive, demes 2–8 complete; now in `/data/bes_results_archive_20261118.tar.zst`); re-run in progress with `scale="none"`.
 
 ## Status
 
@@ -63,5 +63,6 @@ All planned components are implemented: the STE baseline (`bes/ste.py`), the
 SoftES / GaussianES search distributions (`bes/algs/es.py`, `bes/algs/ges.py`),
 the microbial GA (`bes/algs/mga.py`), the batched BNN core (`bes/mlp.py`), and
 the experiment runners/plotters under `experiments/`. Current recipes, sweeps,
-and recorded results are maintained in `AGENTS.md`; use that file as the
-operational reference rather than this design note.
+and recorded results are maintained in `AGENTS.md` and
+`docs/experiments.md`; use those files as the operational reference rather than
+this design note.

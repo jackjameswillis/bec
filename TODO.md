@@ -1,4 +1,5 @@
 # TODO
 
-No open implementation items. See `DESIGN.md` for the design status and
-`AGENTS.md` for commands, architecture conventions, and recorded results.
+Open items are tracked in `tasks.md`. Deferred Gaussian-paper work is listed
+at the bottom of that file. Retained results are indexed in
+`results/README.md`.

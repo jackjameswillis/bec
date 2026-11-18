@@ -27,6 +27,7 @@
 - Tests (no pytest installed; plain scripts with `main()` + `if __name__ == "__main__"`):
   - `/data/ste/venv/bin/python tests/run_all.py` — run every `tests/test_*.py` script sequentially in fresh processes and summarise (OK, ~94 s)
   - `/data/ste/venv/bin/python tests/test_entrypoints.py` — `--help` smoke checks for runner/plot CLIs plus tiny ES/GES/MGA runs and history-ordering invariant (OK)
+  - `/data/ste/venv/bin/python tests/test_resume.py` — sweep resume-cache config matching (OK)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
   - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity (OK)
   - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)
@@ -38,7 +39,7 @@
 - Soft ES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_es.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 0.1] [--shaping none|standardize|rank] [--bias-lr LR] [--adam] [--grad-chunk K] [--natural] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--scale fixed|he|none`, `--activation sign|relu`, `--chunk 8192` (sample chunk; GPU memory lever for wide nets — h1024 pop-100 needs `--chunk 1024` or 512)
 - Gaussian ES (sign-quantized, `submission/gaussian-paper`): `cd /data/bes && /data/ste/venv/bin/python experiments/run_ges.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 1.0] [--init-std 1.0] [--shaping none|standardize|rank] [--adam] [--grad-chunk K] [--out PATH]` plus `--hidden/--layers/--scale/--activation/--chunk/--pop-chunk/--diagnostics/--save-theta` (same semantics as run_es.py; no biases — weights-only, fitness gets `bias=None`)
 - Microbial GA: `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga.py [--population 100] [--deme 2] [--crossrate 0.5] [--mutation-rate 0.001] [--bias-std 0.01] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--scale fixed|he|none] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--activation sign|relu`, `--chunk 8192`, `--pop-chunk 0`
-- MGA deme sweep (runner defaults reproduce mgab's exact recipe; for the Arc-1 archive use `--iterations 1000 --mutation-rate 1e-5 --bias-std 1e-5 --out-dir results/mga_sweep`): `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga_sweep.py [--demelist 2,4,8,16,32,64,128,256] [--crossrates 0.5,1.0] [--seeds 0,1,2] [--population 256] [--fitness-batch 512] [--iterations 2000] [--mutation-rate 1e-4] [--bias-std 1.0] [--eval-every 10] [--eval-chunk 2048] [--scale fixed|he|none] [--activation sign|relu] [--resume] [--out-dir results/mga_sweep_exact]`
+- MGA deme sweep (runner defaults reproduce mgab's exact recipe; for the Arc-1 archive use `--iterations 1000 --mutation-rate 1e-5 --bias-std 1e-5 --out-dir results/mga_sweep`): `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga_sweep.py [--demelist 2,4,8,16,32,64,128,256] [--crossrates 0.5,1.0] [--seeds 0,1,2] [--population 256] [--fitness-batch 512] [--iterations 2000] [--mutation-rate 1e-4] [--bias-std 1.0] [--eval-every 10] [--eval-chunk 2048] [--scale fixed|he|none] [--activation sign|relu] [--resume] [--rerun-stale] [--out-dir results/mga_sweep_exact]`
 - MGA sweep figures: `cd /data/bes && /data/ste/venv/bin/python experiments/plot_mga_sweep.py [--in-dir results/mga_sweep_exact] [--out-dir figures/mga_sweep]` (matplotlib installed in the ste venv)
 - MGA collapse figure (2-row: mean acc / mean loss-log traces + peak→final per deme): `cd /data/bes && /data/ste/venv/bin/python experiments/plot_cr05_collapse.py [--in-dir results/mga_sweep_exact] [--cr 0.5] [--out figures/cr05_collapse.pdf]`
 
@@ -48,7 +49,7 @@
   [--iterations 1000] [--eval-every 10] [--pops 128,256,512,1024] [--lr-scale
   100.0] [--sweep-pop 0] [--depth-hidden 256] [--depths 1,2,3] [--shapings
   none,standardize,rank] [--batches 256,1024,4096] [--arms
-  pop,depth,shape,batch] [--out-dir results/paper_sweep] [--resume] [--dry-run]`.
+  pop,depth,shape,batch] [--out-dir results/paper_sweep] [--resume] [--rerun-stale] [--dry-run]`.
   lr = `--lr-scale`/population (step-size rule for the population-summed
   estimator; P=100↔lr 1, P=1024↔lr 0.0977). Each run = one subprocess of
   `run_es.py` (fresh TF process; recorded-working GPU levers per arch).
@@ -61,7 +62,7 @@
   tags don't encode iterations): `cd /data/bes && /data/ste/venv/bin/python
   experiments/run_paper_sweep.py --seeds 42,43,44 --iterations 2000 --arms
   pop,depth,batch --base-hidden 256 --out-dir results/paper_sweep_h256_it2000
-  --resume`; 10 cells × 3 seeds = 30 runs, 8 unique configs (p1024 = h256x1
+  --resume [--rerun-stale]`; 10 cells × 3 seeds = 30 runs, 8 unique configs (p1024 = h256x1
   depth cell = b4096 batch cell dedupe); ~5 h GPU.
 - Paper sweep figures: `cd /data/bes && /data/ste/venv/bin/python
   experiments/plot_paper_sweep.py [--in-dir results/paper_sweep] [--out-dir
@@ -420,7 +421,8 @@
 - `experiments/run_mga_sweep.py`: deme × crossrate × seeds grid runner (mgab
   reproduction; per-seed JSONs under per-cell dirs in the `--out-dir`, default
   `results/mga_sweep_exact/`, plus `summary_cr*.json` with config-means;
-  `--resume` skips finished files). Dense
+  `--resume` skips files whose cached config matches; stale caches fail
+  unless `--rerun-stale` is passed). Dense
   monitoring = all-P full-val metrics every `--eval-every`; mgab recorded every
   iteration on its 10k test set (GPU-era patchwork of iteration counts/params —
   the recorded data is not internally uniform; this sweep is a single-protocol

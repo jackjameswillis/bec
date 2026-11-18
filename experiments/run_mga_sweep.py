@@ -29,11 +29,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from experiments._resume import config_mismatches, format_mismatches
+
 import tensorflow as tf
 
 from bes import data, mlp
 from bes.algs.mga import MicrobialGA
 from bes.fitness import BNNFitness
+
+
+def expected_config(args, deme, crossrate, seed):
+    return {
+        "population": args.population,
+        "deme": deme,
+        "crossrate": crossrate,
+        "seed": seed,
+        "batch": args.fitness_batch,
+        "iterations": args.iterations,
+        "mutation_rate": args.mutation_rate,
+        "bias_std": args.bias_std,
+        "eval_every": args.eval_every,
+        "hidden": args.hidden,
+        "fitness": args.fitness,
+        "loss": args.loss,
+        "schedule": "cycle",
+        "scale": args.scale,
+        "activation": args.activation,
+    }
 
 
 def run_cell(args, deme, crossrate, seed, x_fit, y_fit, x_val, y_val, x_test, y_test,
@@ -121,7 +143,11 @@ def main():
     parser.add_argument("--loss", choices=["ce", "hinge"], default="ce")
     parser.add_argument("--out-dir", type=str, default=None)
     parser.add_argument("--resume", action="store_true",
-                        help="skip per-seed JSONs that already exist")
+                        help="skip per-seed JSONs whose cached config matches "
+                             "the requested recipe")
+    parser.add_argument("--rerun-stale", action="store_true",
+                        help="overwrite cached per-seed JSONs whose config does "
+                             "not match the requested recipe")
     args = parser.parse_args()
     if args.iterations <= 0:
         parser.error("--iterations must be positive")
@@ -166,10 +192,41 @@ def main():
             finals, peaks, tests = [], [], []
             for seed in seeds:
                 path = cell_dir / f"{tag}_s{seed}.json"
+                rec = None
                 if args.resume and path.exists():
-                    rec = json.loads(path.read_text())
-                    print(f"    seed={seed} resume {path.name}", flush=True)
-                else:
+                    try:
+                        rec = json.loads(path.read_text())
+                    except (OSError, ValueError) as exc:
+                        if not args.rerun_stale:
+                            raise SystemExit(
+                                f"unreadable resume cache {path}: {exc}")
+                        print(f"    seed={seed} unreadable cache; rerunning",
+                              flush=True)
+                        rec = None
+                    if rec is not None and not isinstance(rec, dict):
+                        if not args.rerun_stale:
+                            raise SystemExit(
+                                f"invalid resume cache {path}: expected object")
+                        print(f"    seed={seed} invalid cache; rerunning",
+                              flush=True)
+                        rec = None
+                    if rec is not None:
+                        stale = config_mismatches(
+                            rec.get("config"),
+                            expected_config(args, deme, cr, seed))
+                        if stale:
+                            detail = format_mismatches(stale)
+                            if not args.rerun_stale:
+                                raise SystemExit(
+                                    f"stale resume cache for {path}:\n{detail}\n"
+                                    "delete it or pass --rerun-stale")
+                            print(f"    seed={seed} stale cache; rerunning\n"
+                                  f"{detail}", flush=True)
+                            rec = None
+                        else:
+                            print(f"    seed={seed} resume {path.name}",
+                                  flush=True)
+                if rec is None:
                     rec = run_cell(args, deme, cr, seed, x_fit, y_fit, x_val, y_val,
                                    x_test, y_test, num_bits, num_bias, shapes)
                     path.write_text(json.dumps(rec, indent=2))

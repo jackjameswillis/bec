@@ -25,7 +25,7 @@ plot-script fixes, dead-code removal, and documentation corrections.
 
 ## Medium priority
 
-- [ ] Add resume validation to `run_paper_sweep.py` and `run_mga_sweep.py`:
+- [x] Add resume validation to `run_paper_sweep.py` and `run_mga_sweep.py`:
       compare cached JSON configs with the requested recipe before skipping, so
       stale configs are not silently reused.
 - [ ] Reduce rank-shaping memory: `fitness_utility` still builds two `(P, P)`

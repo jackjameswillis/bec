@@ -44,6 +44,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
+sys.path.insert(0, str(ROOT))
+
+from experiments._resume import config_mismatches, format_mismatches
 
 GPU_LEVERS = {
     (1024, 1): dict(chunk=512, grad_chunk=128, pop_chunk=128),
@@ -65,6 +68,34 @@ def load_record(path):
     if isinstance(rec, dict) and "val" in rec and rec.get("history"):
         return rec
     return None
+
+
+def expected_config(spec, args, seed):
+    return {
+        "population": spec["pop"],
+        "lr": spec["lr"],
+        "iterations": args.iterations,
+        "p_init": 0.5,
+        "fitness": "loss",
+        "loss": "ce",
+        "fitness_batch": spec["batch"],
+        "eval_every": args.eval_every,
+        "seed": seed,
+        "table_rows": 0,
+        "antithetic": False,
+        "sigma": 0.0,
+        "shaping": spec["shaping"],
+        "bias_lr": None,
+        "adam": False,
+        "grad_chunk": spec["grad_chunk"],
+        "natural": False,
+        "pop_chunk": spec["pop_chunk"],
+        "hidden": spec["hidden"],
+        "layers": spec["layers"],
+        "scale": "he",
+        "activation": "relu",
+        "chunk": spec["chunk"],
+    }
 
 
 def cell_summary(recs, seeds, spec):
@@ -129,7 +160,11 @@ def main():
                         help="interpreter for the run_es.py subprocesses")
     parser.add_argument("--out-dir", type=str, default=None)
     parser.add_argument("--resume", action="store_true",
-                        help="skip per-seed JSONs that already exist")
+                        help="skip per-seed JSONs whose cached config matches "
+                             "the requested recipe")
+    parser.add_argument("--rerun-stale", action="store_true",
+                        help="overwrite cached per-seed JSONs whose config does "
+                             "not match the requested recipe")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the plan and exit without running")
     args = parser.parse_args()
@@ -219,11 +254,22 @@ def main():
         label = f"[{i}/{total}] {cell['arm']}/{cell['label']} seed {seed}"
         cached = load_record(out) if args.resume else None
         if cached is not None:
-            recs[key] = cached
-            print(f"{label} RESUME val "
-                  f"{cached['history'][-1]['mode_val_acc']:.4f} test "
-                  f"{cached['test']['accuracy']:.4f}", flush=True)
-            continue
+            stale = config_mismatches(
+                cached.get("config"), expected_config(spec, args, seed))
+            if stale:
+                detail = format_mismatches(stale)
+                if not args.rerun_stale:
+                    raise SystemExit(
+                        f"stale resume cache for {out}:\n{detail}\n"
+                        "delete it or pass --rerun-stale")
+                print(f"WARNING: stale resume cache for {out}; rerunning\n"
+                      f"{detail}", flush=True)
+            else:
+                recs[key] = cached
+                print(f"{label} RESUME val "
+                      f"{cached['history'][-1]['mode_val_acc']:.4f} test "
+                      f"{cached['test']['accuracy']:.4f}", flush=True)
+                continue
         log = out.with_suffix(".log")
         print(f"{label} START (log {log})", flush=True)
         started = time.time()

@@ -29,7 +29,7 @@
   - `/data/ste/venv/bin/python tests/test_entrypoints.py` — `--help` smoke checks for runner/plot CLIs plus tiny ES/GES/MGA runs and history-ordering invariant (OK)
   - `/data/ste/venv/bin/python tests/test_resume.py` — sweep resume-cache config matching (OK)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
-  - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity (OK)
+  - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the old `(P, P)` reference across sizes/ties (OK)
   - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)
   - `/data/ste/venv/bin/python tests/test_ges.py` — GaussianES determinism/table-wraparound, known-noise numpy parity, streaming re-draw consistency, linear-fitness score unbiasedness vs the closed-form Phi gradient, SoftES shaping parity, grad-chunk parity, theta=0 diagnostics (OK)
   - `/data/ste/venv/bin/python tests/test_mga.py` — MicrobialGA pairing/tournament operators (OK)
@@ -268,8 +268,9 @@
   (`results/ste_h1024x3_he_adam_noiq_seed42_20261112_114109.json`).
 - `bes/data.py`: MNIST; full-precision input normalised by train mean/std (+1e-7);
   validation split = last 10% (6000 samples); returns (fit, val, test).
-- `bes/algs/_common.py`: shared ES helpers — fitness shaping (`_utility`),
-  bias-corrected Adam step, fitness stats, binary entropy/commitment diagnostics
+- `bes/algs/_common.py`: shared ES helpers — fitness shaping (`_utility`; rank
+  uses an argsort average-rank implementation with O(P) memory), bias-corrected
+  Adam step, fitness stats, binary entropy/commitment diagnostics
   and the packed diagnostics tensor, plus the adaptive noise row-chunk size.
 - `experiments/_common.py`: shared runner plumbing — split loading, shape/fitness
   construction, per-individual and final split metrics, snapshot-step selection,

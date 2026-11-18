@@ -15,10 +15,22 @@ import tensorflow as tf
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bes import mlp
+from bes.algs._common import fitness_utility
 from bes.algs.es import SoftES
 
 NUM_BITS = 8
 POP = 6
+
+
+def reference_rank(f):
+    f = np.asarray(f, dtype=np.float64)
+    p = f.shape[0]
+    if p <= 1:
+        return np.zeros_like(f)
+    less = (f[:, None] > f[None, :]).astype(np.float64)
+    equal = (f[:, None] == f[None, :]).astype(np.float64)
+    avg_rank = less.sum(axis=1) + (equal.sum(axis=1) + 1.0) / 2.0
+    return (avg_rank - (p + 1.0) / 2.0) / (p - 1.0)
 
 
 def build_es(shaping, fitness, num_bias=0, sigma=0.25, seed=0):
@@ -63,6 +75,21 @@ def main():
     # all-equal fitness -> zero utility (no spurious step)
     u = build_es("rank", np.full(POP, -1.0))._utility().numpy()
     np.testing.assert_allclose(u, 0.0, atol=1e-7)
+
+    # vectorised argsort rank matches the old (P, P) reference across sizes/ties
+    for p in (1, 2, 3, 6, 17, 64, 257):
+        for values in (rng.normal(size=p),
+                       rng.integers(0, 4, size=p).astype(np.float64)):
+            got = fitness_utility(
+                tf.constant(values, dtype=tf.float32), "rank").numpy()
+            np.testing.assert_allclose(
+                got, reference_rank(values), rtol=1e-6, atol=1e-7)
+
+    # large population: bounded centred average ranks, no (P, P) allocation
+    big = rng.normal(size=4096).astype(np.float32)
+    u = fitness_utility(tf.constant(big), "rank").numpy()
+    assert u.min() >= -0.5 - 1e-6 and u.max() <= 0.5 + 1e-6
+    np.testing.assert_allclose(u.sum(), 0.0, atol=1e-5)
 
     # --- update() parity for each mode (weights + biases)
     num_bias = mlp.num_bias(2, 2, 2)

@@ -20,13 +20,24 @@ def fitness_utility(f, shaping):
     if shaping == "standardize":
         return (f - tf.reduce_mean(f)) / (tf.math.reduce_std(f) + 1e-12)
     if shaping == "rank":
-        p = tf.cast(tf.shape(f)[0], tf.float32)
+        n = tf.shape(f)[0]
+        p = tf.cast(n, tf.float32)
         if float(p) <= 1.0:
             return tf.zeros_like(f)
-        less = tf.cast(f[:, None] > f[None, :], tf.float32)
-        equal = tf.cast(tf.equal(f[:, None], f[None, :]), tf.float32)
-        avg_rank = (tf.reduce_sum(less, axis=1)
-                    + (tf.reduce_sum(equal, axis=1) + 1.0) / 2.0)
+        order = tf.argsort(f, stable=True)
+        sorted_f = tf.gather(f, order)
+        starts = tf.concat(
+            [tf.constant([True]), sorted_f[1:] != sorted_f[:-1]], axis=0)
+        group = tf.cumsum(tf.cast(starts, tf.int32)) - 1
+        groups = group[-1] + 1
+        counts = tf.math.unsorted_segment_sum(
+            tf.ones([n], tf.int32), group, groups)
+        before = tf.concat(
+            [tf.constant([0], tf.int32), tf.cumsum(counts)[:-1]], axis=0)
+        avg_group = (tf.cast(before, tf.float32)
+                     + (tf.cast(counts, tf.float32) + 1.0) / 2.0)
+        avg_sorted = tf.gather(avg_group, group)
+        avg_rank = tf.math.unsorted_segment_sum(avg_sorted, order, n)
         return (avg_rank - (p + 1.0) / 2.0) / (p - 1.0)
     raise ValueError(f"unknown fitness shaping: {shaping}")
 

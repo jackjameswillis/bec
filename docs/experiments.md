@@ -39,7 +39,7 @@ listed in [`../results/README.md`](../results/README.md).
   - `/data/ste/venv/bin/python tests/test_ste_bias.py` — STE `--use-bias` forward parity vs the ES model across scale modes (OK; sets legacy Keras internally)
   - `/data/ste/venv/bin/python tests/test_output_names.py` — default ES/GES/STE output-stem compatibility (OK)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
-  - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the old `(P, P)` reference across sizes/ties (OK)
+  - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the ordinal-rank reference across sizes/ties (OK)
   - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)
   - `/data/ste/venv/bin/python tests/test_ges.py` — GaussianES determinism/table-wraparound, known-noise numpy parity, streaming re-draw consistency, linear-fitness score unbiasedness vs the closed-form Phi gradient, SoftES shaping parity, grad-chunk parity, theta=0 diagnostics (OK)
   - `/data/ste/venv/bin/python tests/test_mga.py` — MicrobialGA pairing/tournament operators (OK)
@@ -282,7 +282,7 @@ listed in [`../results/README.md`](../results/README.md).
 - `bes/data.py`: MNIST; full-precision input normalised by train mean/std (+1e-7);
   validation split = last 10% (6000 samples); returns (fit, val, test).
 - `bes/algs/_common.py`: shared ES helpers — fitness shaping (`_utility`; rank
-  uses an argsort average-rank implementation with O(P) memory), bias-corrected
+  uses an argsort ordinal-rank implementation with O(P) memory), bias-corrected
   Adam step, fitness stats, binary entropy/commitment diagnostics
   and the packed diagnostics tensor, plus the adaptive noise row-chunk size.
 - `experiments/_common.py`: shared runner plumbing — split loading, shape/fitness
@@ -372,8 +372,9 @@ listed in [`../results/README.md`](../results/README.md).
   Fitness shaping (`shaping`, added 2026-11-11) replaces the raw advantage
   `f_i - mean(f)` with a bounded utility shared by both coordinate gradients:
   `none` (default, unbiased REINFORCE), `standardize` (population z-score),
-  `rank` (centered average ranks in [-0.5, 0.5], Salimans et al. 1703.03864;
-  average ranks for ties, all-equal fitness -> zero utility). Shaped utilities
+  `rank` (centered ordinal ranks in [-0.5, 0.5] = r/(P-1) - 0.5, Salimans et
+  al. 1703.03864; stable sort breaks ties by index, all-equal fitness ->
+  index-order spread). Shaped utilities
   are population-dependent, hence biased as estimators — they bound the step
   and decouple it from the fitness scale (exploding-CE runaway guard).
   Known deviation: with `antithetic=True` the bias pair contributes

@@ -56,7 +56,7 @@ def main():
                         help="fitness shaping for the REINFORCE advantage: "
                              "'none' = raw f - mean(f) (unbiased), "
                              "'standardize' = population z-score, "
-                             "'rank' = centered average ranks in [-0.5, 0.5] "
+                             "'rank' = centered ordinal ranks in [-0.5, 0.5] "
                              "(Salimans et al. 1703.03864)")
     parser.add_argument("--bias-lr", type=float, default=None,
                         help="separate learning rate for the continuous bias "

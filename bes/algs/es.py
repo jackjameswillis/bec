@@ -50,10 +50,11 @@ own learning rate (``bias_lr``); ``None`` (default) falls back to the shared
 Fitness shaping (``shaping``) replaces the raw advantage ``f_i - mean(f)``
 with a bounded per-individual utility shared by both coordinate gradients
 (Salimans et al. 1703.03864): ``"none"`` = raw advantage (unbiased REINFORCE),
-``"standardize"`` = population z-score, ``"rank"`` = centered average ranks in
-``[-0.5, 0.5]`` (tied fitnesses share average ranks; all-equal fitness gives
-zeros). Shaped utilities depend on the whole population's fitness, so unlike
-``"none"`` they are not unbiased REINFORCE baselines — they bound the step
+``"standardize"`` = population z-score, ``"rank"`` = centered ordinal ranks in
+``[-0.5, 0.5]`` (0-based sort position scaled to the interval; ties broken by
+population index; all-equal fitness gives a fixed index-order spread). Shaped
+utilities depend on the whole population's fitness, so unlike ``"none"`` they
+are not unbiased REINFORCE baselines — they bound the step
 size and decouple it from the fitness scale (e.g. exploding CE), at the cost
 of estimator bias.
 

@@ -12,8 +12,9 @@ def fitness_utility(f, shaping):
     """Per-individual utility from a population fitness vector.
 
     ``"none"``: ``f - mean(f)``. ``"standardize"``: population z-score.
-    ``"rank"``: centered average ranks in ``[-0.5, 0.5]`` (ties share their
-    average rank; all-equal fitness gives zero utility).
+    ``"rank"``: centered ordinal ranks in ``[-0.5, 0.5]`` — ``r / (P - 1) - 0.5``
+    with ``r`` the 0-based sort position (OpenAI-ES convention; a stable sort
+    breaks ties by population index). ``P == 1`` gives zero utility.
     """
     if shaping == "none":
         return f - tf.reduce_mean(f)
@@ -25,20 +26,8 @@ def fitness_utility(f, shaping):
         if float(p) <= 1.0:
             return tf.zeros_like(f)
         order = tf.argsort(f, stable=True)
-        sorted_f = tf.gather(f, order)
-        starts = tf.concat(
-            [tf.constant([True]), sorted_f[1:] != sorted_f[:-1]], axis=0)
-        group = tf.cumsum(tf.cast(starts, tf.int32)) - 1
-        groups = group[-1] + 1
-        counts = tf.math.unsorted_segment_sum(
-            tf.ones([n], tf.int32), group, groups)
-        before = tf.concat(
-            [tf.constant([0], tf.int32), tf.cumsum(counts)[:-1]], axis=0)
-        avg_group = (tf.cast(before, tf.float32)
-                     + (tf.cast(counts, tf.float32) + 1.0) / 2.0)
-        avg_sorted = tf.gather(avg_group, group)
-        avg_rank = tf.math.unsorted_segment_sum(avg_sorted, order, n)
-        return (avg_rank - (p + 1.0) / 2.0) / (p - 1.0)
+        ranks = tf.math.invert_permutation(order)
+        return tf.cast(ranks, tf.float32) / (p - 1.0) - 0.5
     raise ValueError(f"unknown fitness shaping: {shaping}")
 
 

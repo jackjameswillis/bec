@@ -173,7 +173,8 @@ def main():
             ges._utility().numpy(), soft._utility().numpy(), rtol=1e-6, atol=1e-6)
     ges = GaussianES(4, 17, shaping="rank", table_rows=None)
     ges.fitness = tf.ones([17])
-    np.testing.assert_allclose(ges._utility().numpy(), np.zeros(17), atol=1e-6)
+    np.testing.assert_allclose(
+        ges._utility().numpy(), np.arange(17) / 16.0 - 0.5, atol=1e-6)
 
     # 6. grad_chunk parity (fp summation order only)
     table6 = rng.standard_normal((64, 32)).astype(np.float32)

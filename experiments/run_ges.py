@@ -57,7 +57,7 @@ def main():
                         help="fitness shaping for the REINFORCE advantage: "
                              "'none' = raw f - mean(f) (unbiased), "
                              "'standardize' = population z-score, "
-                             "'rank' = centered average ranks in [-0.5, 0.5] "
+                             "'rank' = centered ordinal ranks in [-0.5, 0.5] "
                              "(Salimans et al. 1703.03864)")
     parser.add_argument("--adam", action="store_true",
                         help="preprocess population-summed gradients with a "

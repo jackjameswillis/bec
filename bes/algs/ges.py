@@ -60,7 +60,7 @@ appends one unpaired row.
 
 Fitness shaping (``shaping``) follows SoftES: ``"none"`` = raw advantage
 (unbiased), ``"standardize"`` = population z-score, ``"rank"`` = centered
-average ranks in ``[-0.5, 0.5]``. With ``adam=True`` the population-summed
+ordinal ranks in ``[-0.5, 0.5]``. With ``adam=True`` the population-summed
 gradient goes through the same bias-corrected per-coordinate Adam rule as
 SoftES. ``update(lr, grad_chunk=k)`` sub-chunks the population multiply-reduce
 so the ``(rows, D)`` float temporaries stay bounded for large populations; it

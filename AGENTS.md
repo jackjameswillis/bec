@@ -62,7 +62,7 @@
 - `bes/data.py`: MNIST, normalised by train mean/std; validation is the last 10%
   of the training split (6000 samples); returns `(fit, val, test)`.
 - `bes/algs/_common.py`: ES helpers — fitness shaping (rank uses argsort
-  average ranks, O(P) memory), Adam step, fitness stats, entropy/commitment
+  ordinal ranks, O(P) memory), Adam step, fitness stats, entropy/commitment
   diagnostics, packed diagnostics, and adaptive noise row-chunk size.
 - `experiments/_common.py`: split loading, shape/fitness construction, metrics,
   snapshot selection, theta dumping, CLI validation, and the shared

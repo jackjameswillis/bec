@@ -1,5 +1,5 @@
 """Paper sweep: population / depth / fitness-shaping / batch-size effects of
-SoftES on MNIST, one factor at a time around a shared base recipe.
+BES on MNIST, one factor at a time around a shared base recipe.
 
 Base recipe (best stable recorded ES configuration on this baseline):
 h1024x1, relu hidden units, he pre-activation scale, loss-based fitness on

@@ -74,7 +74,7 @@ class MicrobialGA:
         self._gen = tf.random.Generator.from_seed(seed)
         self._pair_rng = np.random.default_rng(seed)
         # adaptive row-chunk: bounds (rows, D) float noise temporaries to
-        # ~1 GB for wide nets (same rule as SoftES streaming sampling)
+        # ~1 GB for wide nets (same rule as BES streaming sampling)
         self._chunk = row_chunk_size(self.num_bits)
         self.population = tf.concat(
             [self._gen.uniform([min(self._chunk, self.population_size - i), self.num_bits],

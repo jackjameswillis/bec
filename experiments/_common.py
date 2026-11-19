@@ -120,7 +120,7 @@ def default_output_path(stem):
 def run_search(algo, args, fitness_fn, x_val, y_val, x_test, y_test,
                shapes, layer_sizes, *, method, bias, extra_diag, out_stem,
                started):
-    """Sample/evaluate/log/update loop shared by SoftES and GaussianES."""
+    """Sample/evaluate/log/update loop shared by BES and GaussianES."""
     history, diag_history, p_snapshots = [], [], []
     theta_dumps = {}
     snapshots = snapshot_steps(args.iterations)

@@ -13,10 +13,12 @@ Checks:
    per-generation mixed seed);
 4. REINFORCE score unbiasedness for a linear fitness against the closed-form
    gradient of J(theta) = sum_j a_j (2 Phi(theta_j / sigma) - 1);
-5. shaping utilities identical to SoftES on the same fitness vector;
+5. shaping utilities identical to BES on the same fitness vector;
 6. grad_chunk parity (fp summation order only, noise stream unchanged);
 7. diagnostics at theta = 0: entropy 1 bit, flip probability 0.5, committed
-   fraction 0.
+   fraction 0;
+8. theta clipped to [-1, 1] at init and after each update (raw and Adam
+   paths).
 """
 
 import sys
@@ -27,7 +29,7 @@ import tensorflow as tf
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from bes.algs.es import SoftES
+from bes.algs.es import BES
 from bes.algs.ges import GaussianES, _noise_seed
 
 
@@ -60,7 +62,8 @@ def numpy_reference(theta, sigma, table, start, pair_rows, extra,
             parts.append((theta[None] + sigma * rows[k:k + extra]) > 0.0)
             grad = grad + u[2 * k:2 * k + extra] @ rows[k:k + extra]
     pop = np.concatenate(parts, axis=0)
-    return pop, theta + np.float32(lr) * grad / sigma
+    updated = theta + np.float32(lr) * grad / sigma
+    return pop, np.clip(updated, -1.0, 1.0)
 
 
 def main():
@@ -140,7 +143,8 @@ def main():
     u = fitness - fitness.mean()
     grad = (u[:2] @ eps_pair + u[2:4] @ (-eps_pair) + u[4:5] @ eps_extra) / sigma3
     np.testing.assert_allclose(
-        es.theta.numpy(), theta + np.float32(0.5) * grad, rtol=1e-5, atol=1e-6)
+        es.theta.numpy(), np.clip(theta + np.float32(0.5) * grad, -1.0, 1.0),
+        rtol=1e-5, atol=1e-6)
 
     # 4. score unbiasedness on a linear fitness: E[f * eps_j / sigma]
     #    == d/dtheta_j sum_i a_i (2 Phi(theta_i / sigma) - 1) = a_j 2 phi(theta_j/sigma) / sigma
@@ -162,15 +166,15 @@ def main():
     exact = a * 2.0 * phi / sigma4
     np.testing.assert_allclose(est, exact, rtol=0.05, atol=0.02)
 
-    # 5. shaping utilities identical to SoftES
+    # 5. shaping utilities identical to BES
     f5 = rng.normal(size=17).astype(np.float32)
     for shaping in ("none", "standardize", "rank"):
         ges = GaussianES(4, 17, shaping=shaping, table_rows=None)
-        soft = SoftES(4, 17, shaping=shaping, table_rows=None)
+        bes = BES(4, 17, shaping=shaping, table_rows=None)
         ges.fitness = tf.constant(f5)
-        soft.fitness = tf.constant(f5)
+        bes.fitness = tf.constant(f5)
         np.testing.assert_allclose(
-            ges._utility().numpy(), soft._utility().numpy(), rtol=1e-6, atol=1e-6)
+            ges._utility().numpy(), bes._utility().numpy(), rtol=1e-6, atol=1e-6)
     ges = GaussianES(4, 17, shaping="rank", table_rows=None)
     ges.fitness = tf.ones([17])
     np.testing.assert_allclose(
@@ -211,6 +215,24 @@ def main():
             raise AssertionError(f"accepted {kwargs}")
         except ValueError:
             pass
+
+    # 9. theta is clipped to [-1, 1] at init and after updates (raw and Adam)
+    es = GaussianES(64, 4, init_std=10.0, table_rows=None, seed=0)
+    theta9 = es.theta.numpy()
+    assert np.all(theta9 <= 1.0) and np.all(theta9 >= -1.0)
+    assert np.any(np.abs(theta9) == 1.0)
+
+    f9 = np.linspace(-1.0, 1.0, 7).astype(np.float32)
+    for adam in (False, True):
+        es = inject_table(GaussianES(d, 7, sigma=sigma, table_rows=t,
+                                     adam=adam, seed=0),
+                          table, np.full(d, 0.5, np.float32))
+        es.sample()
+        es.fitness = tf.constant(f9)
+        es.update(100.0)
+        theta9 = es.theta.numpy()
+        assert np.all(theta9 <= 1.0) and np.all(theta9 >= -1.0), theta9
+        assert np.any(np.abs(theta9) >= 1.0 - 1e-6), theta9
 
     print("test_ges: all checks passed")
 

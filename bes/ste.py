@@ -12,7 +12,7 @@ layer the raw normalised pixels instead. Training: plain SGD without
 momentum, categorical cross-entropy, no label smoothing.
 
 Locked design decision "no biases for now" is applied as the default
-(``use_bias=False``) so STE and the soft ES optimise the same hypothesis
+(``use_bias=False``) so STE and BES optimise the same hypothesis
 space; pass ``use_bias=True`` to add biases after each per-layer
 pre-activation scale, matching the ES forward (with ``scale="none"`` this is
 the original script's bias placement).

@@ -30,7 +30,7 @@
   `test_gradient.py`, `test_shaping.py`, `test_es_table.py`, `test_ges.py`,
   `test_mga.py`, `test_fitness.py`, `test_forward.py`.
 - STE baseline: `cd /data/bes && TF_USE_LEGACY_KERAS=1 /data/ste/venv/bin/python experiments/run_ste.py [--epochs 25] [--batch-size 512] [--learning-rate 0.001] [--hidden 64] [--layers 1] [--scale none|fixed|he] [--eval-every N] [--optimizer sgd|adam] [--no-input-quant] [--use-bias] [--seed 42] [--out PATH]` (default stems include lr, epochs, batch size).
-- Soft ES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_es.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 0.1] [--shaping none|standardize|rank] [--bias-lr LR] [--adam] [--natural] [--grad-chunk K] [--pop-chunk K] [--hidden 64] [--layers 1] [--scale fixed|he|none] [--activation sign|relu] [--chunk 8192] [--diagnostics] [--save-theta] [--out PATH]`.
+- BES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_es.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 0.1] [--shaping none|standardize|rank] [--bias-lr LR] [--adam] [--natural] [--grad-chunk K] [--pop-chunk K] [--hidden 64] [--layers 1] [--scale fixed|he|none] [--activation sign|relu] [--chunk 8192] [--diagnostics] [--save-theta] [--out PATH]`.
 - Gaussian ES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_ges.py` with the same architecture/memory flags plus `--init-std 1.0` and `--sigma 1.0`; weights-only (fitness gets `bias=None`).
 - Microbial GA: `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga.py [--population 100] [--deme 2] [--crossrate 0.5] [--mutation-rate 0.001] [--bias-std 0.01] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--scale fixed|he|none] [--activation sign|relu] [--hidden 64] [--layers 1] [--chunk 8192] [--pop-chunk 0] [--out PATH]`.
 - MGA sweep: `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga_sweep.py [--demelist ...] [--crossrates ...] [--seeds 0,1,2] [--population 256] [--fitness-batch 512] [--iterations 2000] [--mutation-rate 1e-4] [--bias-std 1.0] [--eval-every 10] [--eval-chunk 2048] [--scale fixed|he|none] [--activation sign|relu] [--resume] [--rerun-stale] [--out-dir results/mga_sweep_exact]`.
@@ -69,15 +69,16 @@
   `run_search` loop. History is logged after each update.
 - `experiments/_names.py`: default output-stem builders. `experiments/_resume.py`:
   cached sweep config validation.
-- `bes/algs/es.py`: SoftES — Bernoulli logits over weight bits plus Gaussian bias
+- `bes/algs/es.py`: BES — Bernoulli logits over weight bits plus Gaussian bias
   coordinates. REINFORCE with mean-fitness baseline, population-summed update;
   options: shaping (`none`/`standardize`/`rank`), `sigma=0` weights-only,
   `bias_lr`, `adam`, `natural`, `antithetic`, table/streaming noise, and
   `--chunk`/`--grad-chunk`/`--pop-chunk` memory levers.
 - `bes/algs/ges.py`: GaussianES — continuous latents, sign-quantized samples,
-  fixed shared `sigma`, `init_std` Gaussian init; weights-only; the perturbation
-  stream is replayed chunk-by-chunk at update time. Table memory is `T*D*4`
-  bytes; use `--table-rows 0` for wide nets.
+  fixed shared `sigma`, `init_std` Gaussian init; weights-only; `theta` is
+  clipped to `[-1, 1]` at init and after each update; the perturbation stream is
+  replayed chunk-by-chunk at update time. Table memory is `T*D*4` bytes; use
+  `--table-rows 0` for wide nets.
 - `bes/algs/mga.py`: MicrobialGA — persistent Bernoulli-0.5 population, ring
   tournament matching, uniform crossover + mutation; population must be even.
 - `bes/fitness.py`: `BNNFitness` schedules `random` (default) and `cycle`
@@ -90,7 +91,7 @@
 
 - larq import requires legacy Keras: run STE commands with
   `TF_USE_LEGACY_KERAS=1`; all other runners/tests work either way.
-- Reproducibility: runners seed TF; SoftES/GaussianES/MGA own their generators.
+- Reproducibility: runners seed TF; BES/GaussianES/MGA own their generators.
   Table and streaming modes are statistically equivalent, not bit-identical.
   GPU and CPU reduction orders differ.
 - `bes/mlp.py` `weight_shapes` chains hidden widths; `tests/test_forward.py`

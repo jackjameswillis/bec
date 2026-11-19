@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import tensorflow as tf
 
 from bes import mlp
-from bes.algs.es import SoftES
+from bes.algs.es import BES
 from experiments._common import (
     load_splits, make_fitness, make_shapes, run_search, validate_args,
 )
@@ -66,7 +66,7 @@ def main():
                              "per-coordinate Adam rule (default: raw update)")
     parser.add_argument("--grad-chunk", type=int, default=0,
                         help="chunk the population reduction into this many rows "
-                             "in SoftES.update (0 = full shot; memory lever for "
+                             "in BES.update (0 = full shot; memory lever for "
                              "large populations; only changes fp summation order)")
     parser.add_argument("--natural", action="store_true",
                         help="divide the weight-bit gradient by the diagonal "
@@ -114,11 +114,11 @@ def main():
     num_bits = mlp.num_bits(hidden_units=hidden_units)
     num_bias = mlp.num_bias(hidden_units=hidden_units)
     fitness_fn = make_fitness(args, x_fit, y_fit, shapes)
-    es = SoftES(num_bits, args.population, p_init=args.p_init,
-                table_rows=args.table_rows if args.table_rows > 0 else None,
-                antithetic=args.antithetic, seed=args.seed,
-                num_bias=num_bias, sigma=args.sigma, shaping=args.shaping,
-                bias_lr=args.bias_lr, adam=args.adam, natural=args.natural)
+    es = BES(num_bits, args.population, p_init=args.p_init,
+             table_rows=args.table_rows if args.table_rows > 0 else None,
+             antithetic=args.antithetic, seed=args.seed,
+             num_bias=num_bias, sigma=args.sigma, shaping=args.shaping,
+             bias_lr=args.bias_lr, adam=args.adam, natural=args.natural)
 
     layer_sizes = [int(i * o) for i, o in shapes]
     assert sum(layer_sizes) == num_bits

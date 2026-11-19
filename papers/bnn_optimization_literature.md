@@ -206,7 +206,7 @@ Huynh, Savvides, Cheng, Shen — 2020
 
 - The STE baseline maps onto Section 1 (BNN paper + larq STE semantics) and provides
   the gradient-based binarised optimisation baseline.
-- The SoftES (Bernoulli REINFORCE over binary individuals) maps onto the ES lineage
+- The BES (Bernoulli REINFORCE over binary individuals) maps onto the ES lineage
   (Sections 4.2–4.5) and the gradient-estimation-through-stochasticity lineage
   (Section 5.1); BOP (Section 2.1) is the binary-specific threshold/EMA alternative.
 - The Bayesian learning-rule thread (Section 3) is the natural third optimisation

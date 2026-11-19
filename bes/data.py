@@ -1,9 +1,9 @@
-"""MNIST data pipeline shared by the STE baseline and the soft ES.
+"""MNIST data pipeline shared by the STE baseline and BES.
 
 Mirrors ``/data/ste/train_mnist_bnn.py`` exactly: flatten to 784, standardise
 with the full training-set mean/std (+1e-7), one-hot labels. The last 10% of
 the training set is split off deterministically as a validation set (identical
-to Keras ``validation_split=0.1`` semantics), so the soft ES evaluates fitness
+to Keras ``validation_split=0.1`` semantics), so BES evaluates fitness
 on exactly the 54000 samples the STE baseline trains on.
 """
 

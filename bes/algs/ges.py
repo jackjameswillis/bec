@@ -3,7 +3,7 @@
 Search parameters are continuous latents ``theta in R^D`` — the latent-weight /
 inertia interpretation of the surrogate parameters of binary networks, as
 opposed to the Bernoulli-expectation interpretation optimised by
-``bes.algs.es.SoftES``. Every generation draws isotropic Gaussian perturbations
+``bes.algs.es.BES``. Every generation draws isotropic Gaussian perturbations
 ``eps ~ N(0, sigma^2 I)`` with a shared fixed scale ``sigma``, forms the
 perturbed parameters ``x_i = theta + eps_i`` and quantizes them with the sign
 map: individual ``i`` is the binary network with weights ``sign(x_i)``. Fitness
@@ -13,8 +13,9 @@ where the search distribution lives (continuous parameter space) and the
 gradient estimator.
 
 The initial search parameters are drawn from a zero-mean Gaussian
-``N(0, init_std^2)`` so exact zeros (where the sign map is undefined) have
-measure zero; bit ``j`` is quantized as ``x_j > 0``.
+``N(0, init_std^2)`` and projected onto ``[-1, 1]`` (exact zeros, where the
+sign map is undefined, have measure zero); bit ``j`` is quantized as
+``x_j > 0``.
 
 REINFORCE gradient of the expected fitness
 ``J(theta) = E_eps[f(sign(theta + eps))]``:
@@ -25,24 +26,27 @@ so with shaped utilities ``u_i`` the population-summed update is
 
     theta <- theta + lr * sum_i u_i * eps_i / sigma
 
-(no division by P — repo population-summed convention). The per-coordinate
-score ``eps / sigma`` has unit variance, vs the bounded Bernoulli score
-``x - s`` of SoftES, so learning-rate units are comparable but the tails are
-heavier. Because the search parameters are plain continuous coordinates
-updated by an additive gradient estimate, optimizer preprocessing (Adam) can
-be applied exactly like in the straight-through-estimator pipeline (the
-``adam`` option below ports SoftES's per-coordinate Adam rule).
+(no division by P — repo population-summed convention). Both the initial
+parameters and every update are projected onto ``[-1, 1]^D`` — the same box the
+STE baseline enforces on its latent weights via ``weight_clip`` — so the
+Gaussian means cannot leave that range. The per-coordinate score
+``eps / sigma`` has unit variance, vs the bounded Bernoulli score ``x - s`` of
+BES, so learning-rate units are comparable but the tails are heavier. Because
+the search parameters are plain continuous coordinates updated by an additive
+gradient estimate, optimizer preprocessing (Adam) can be applied exactly like
+in the straight-through-estimator pipeline (the ``adam`` option below ports
+BES's per-coordinate Adam rule).
 
 The induced distribution over binary vectors is a product of Bernoullis with
 rates ``p_j = P(sign(theta_j + eps) = 1) = Phi(theta_j / sigma)`` (erf), i.e.
-the same Bernoulli family as SoftES under a monotone reparameterisation of the
+the same Bernoulli family as BES under a monotone reparameterisation of the
 logits; the two algorithms differ in parameterisation, score function, and
 convergence dynamics (commitment now appears as ``|theta_j| >> sigma`` growth
 instead of logit saturation).
 
 Perturbation noise comes either from a pre-generated table of
 theta-independent standard normals (``table_rows``; reusable at every theta
-since ``eps`` does not depend on ``theta``, circular rows like SoftES) or from
+since ``eps`` does not depend on ``theta``, circular rows like BES) or from
 a streaming sampler (``table_rows=None``). The REINFORCE score needs the float
 perturbations again at update time, but the ``(P, D)`` noise tensor is never
 materialised whole: ``sample()`` and ``update()`` replay the identical
@@ -58,15 +62,15 @@ Bernoulli case at p = 0.5 these bits are NOT complements in general, the
 variance reduction comes from the mirrored score ``-eps``). An odd population
 appends one unpaired row.
 
-Fitness shaping (``shaping``) follows SoftES: ``"none"`` = raw advantage
+Fitness shaping (``shaping``) follows BES: ``"none"`` = raw advantage
 (unbiased), ``"standardize"`` = population z-score, ``"rank"`` = centered
 ordinal ranks in ``[-0.5, 0.5]``. With ``adam=True`` the population-summed
 gradient goes through the same bias-corrected per-coordinate Adam rule as
-SoftES. ``update(lr, grad_chunk=k)`` sub-chunks the population multiply-reduce
+BES. ``update(lr, grad_chunk=k)`` sub-chunks the population multiply-reduce
 so the ``(rows, D)`` float temporaries stay bounded for large populations; it
 does NOT change the noise stream (only the fp summation order).
 
-Diagnostics mirror SoftES through the induced Bernoulli rates ``p =
+Diagnostics mirror BES through the induced Bernoulli rates ``p =
 Phi(theta / sigma)``: mean per-bit entropy, committed fraction (``p < 0.01``
 or ``p > 0.99``), plus a Gaussian-specific ``flip_frac`` — the mean probability
 that a perturbation flips the mode bit, ``E[P(sign(theta + eps) != sign(theta))]
@@ -136,7 +140,9 @@ class GaussianES(ESCommon):
         self._base_seed = 0 if seed is None else int(seed)
         self._gen = tf.random.Generator.from_seed(self._base_seed)
         self.theta = tf.Variable(
-            self._gen.normal([self.num_bits], stddev=self.init_std),
+            tf.clip_by_value(
+                self._gen.normal([self.num_bits], stddev=self.init_std),
+                -1.0, 1.0),
             trainable=False)
         self._table = (
             None if self.table_rows is None
@@ -146,7 +152,7 @@ class GaussianES(ESCommon):
         self._noise_idx = None   # table mode: circular row indices of the current generation
         self._generation = 0
         # adaptive streaming row-chunk: bounds each (rows, D) float noise chunk
-        # to ~1 GB/3 for wide nets (same rule as SoftES)
+        # to ~1 GB/3 for wide nets (same rule as BES)
         self._stream_chunk = row_chunk_size(self.num_bits)
         self._m = tf.Variable(tf.zeros([self.num_bits], tf.float32), trainable=False)
         self._v = tf.Variable(tf.zeros([self.num_bits], tf.float32), trainable=False)
@@ -163,7 +169,7 @@ class GaussianES(ESCommon):
         Each paired noise row generates a ``+eps`` / ``-eps`` individual pair,
         so ``P // 2`` rows cover ``2 * (P // 2)`` individuals and the odd
         tail row covers the remaining one (ceil(P/2) rows total, matching
-        SoftES's antithetic consumption).
+        BES's antithetic consumption).
         """
         if self.antithetic:
             return self.population_size // 2, self.population_size % 2
@@ -240,7 +246,8 @@ class GaussianES(ESCommon):
         return tf.add_n(parts)
 
     def update(self, lr, grad_chunk=None):
-        """REINFORCE step: theta <- theta + lr * sum_i u_i * eps_i / sigma.
+        """REINFORCE step: theta <- theta + lr * sum_i u_i * eps_i / sigma,
+        then project theta onto ``[-1, 1]``.
 
         Replays the current generation's noise stream chunk-by-chunk (see
         ``_eps_chunks``); the ``(P, D)`` perturbation tensor is never
@@ -267,6 +274,7 @@ class GaussianES(ESCommon):
             self._adam_step(self.theta, grad, self._m, self._v, lr)
         else:
             self.theta.assign_add(tf.cast(lr, tf.float32) * grad)
+        self.theta.assign(tf.clip_by_value(self.theta, -1.0, 1.0))
 
     def _flip(self):
         """Mean perturbation flip probability ``E[Phi(-|theta| / sigma)]``."""

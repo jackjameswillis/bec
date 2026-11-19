@@ -90,7 +90,7 @@ from bes.algs._common import (
 )
 
 
-class SoftES(ESCommon):
+class BES(ESCommon):
     """Bernoulli(logit) search distribution over binary individuals.
 
     Continuous bias coordinates (hidden + output layers) ride along in the
@@ -165,7 +165,7 @@ class SoftES(ESCommon):
     def rows_per_generation(self):
         """Noise rows consumed per generation (antithetic pairs halve it)."""
         if self.antithetic:
-            return self.population_size - self.population_size // 2
+            return (self.population_size + 1) // 2
         return self.population_size
 
     def _noise_chunks(self, rows):

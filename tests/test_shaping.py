@@ -1,6 +1,6 @@
 """Fitness-shaping test for the soft Bernoulli ES.
 
-Checks SoftES._utility against hand-computed utilities for the three
+Checks BES._utility against hand-computed utilities for the three
 shaping modes ("none", "standardize", "rank"), including stable tie-breaking
 and the all-equal-fitness degenerate case, plus an end-to-end update() parity
 check for each mode on a constructed population.
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bes import mlp
 from bes.algs._common import fitness_utility
-from bes.algs.es import SoftES
+from bes.algs.es import BES
 
 NUM_BITS = 8
 POP = 6
@@ -33,8 +33,8 @@ def reference_rank(f):
 
 
 def build_es(shaping, fitness, num_bias=0, sigma=0.25, seed=0):
-    es = SoftES(NUM_BITS, POP, p_init=0.5, seed=seed, num_bias=num_bias,
-                sigma=sigma, shaping=shaping)
+    es = BES(NUM_BITS, POP, p_init=0.5, seed=seed, num_bias=num_bias,
+             sigma=sigma, shaping=shaping)
     es.population = tf.zeros((POP, NUM_BITS), dtype=tf.bool)
     es.fitness = tf.convert_to_tensor(np.asarray(fitness, np.float32))
     return es
@@ -118,8 +118,8 @@ def main():
                                    rtol=1e-5, atol=1e-6)
 
     # --- bias_lr decouples the bias step from the weight lr (score unchanged)
-    es = SoftES(NUM_BITS, POP, p_init=0.5, seed=0, num_bias=num_bias,
-                sigma=0.25, shaping="none", bias_lr=0.5)
+    es = BES(NUM_BITS, POP, p_init=0.5, seed=0, num_bias=num_bias,
+             sigma=0.25, shaping="none", bias_lr=0.5)
     es.population = tf.convert_to_tensor(
         rng.integers(0, 2, size=(POP, NUM_BITS)).astype(bool))
     es.bias = tf.convert_to_tensor(bias_draw)
@@ -136,8 +136,8 @@ def main():
                                rtol=1e-5, atol=1e-6)
 
     # --- adam: two updates parity against a manual numpy Adam reference
-    es = SoftES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0,
-                shaping="none", adam=True)
+    es = BES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0,
+             shaping="none", adam=True)
     es.population = tf.convert_to_tensor(
         rng.integers(0, 2, size=(POP, NUM_BITS)).astype(bool))
     es.fitness = tf.convert_to_tensor(np.asarray(fitness, np.float32))
@@ -159,13 +159,13 @@ def main():
                                    rtol=1e-5, atol=1e-6)
 
     # --- grad_chunk: chunked population reduction == full shot (fp order only)
-    es = SoftES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0, shaping="none")
+    es = BES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0, shaping="none")
     es.population = tf.convert_to_tensor(
         rng.integers(0, 2, size=(POP, NUM_BITS)).astype(bool))
     es.fitness = tf.convert_to_tensor(np.asarray(fitness, np.float32))
     es.update(0.05)
     full = es.theta.numpy().copy()
-    es2 = SoftES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0, shaping="none")
+    es2 = BES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0, shaping="none")
     es2.population = es.population
     es2.fitness = es.fitness
     es2.update(0.05, grad_chunk=2)
@@ -182,8 +182,8 @@ def main():
     np.testing.assert_array_equal(acc_ch.numpy(), acc_full.numpy())
 
     # --- natural: p_init 0.5 -> s(1-s) = 0.25 -> grad scaled by 4 (eps ~0)
-    es = SoftES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0,
-                shaping="none", natural=True, natural_eps=1e-8)
+    es = BES(NUM_BITS, POP, p_init=0.5, seed=0, sigma=0.0,
+             shaping="none", natural=True, natural_eps=1e-8)
     es.population = tf.convert_to_tensor(
         rng.integers(0, 2, size=(POP, NUM_BITS)).astype(bool))
     es.fitness = tf.convert_to_tensor(np.asarray(fitness, np.float32))

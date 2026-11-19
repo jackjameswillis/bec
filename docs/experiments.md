@@ -39,14 +39,14 @@ listed in [`../results/README.md`](../results/README.md).
   - `/data/ste/venv/bin/python tests/test_ste_bias.py` — STE `--use-bias` forward parity vs the ES model across scale modes (OK; sets legacy Keras internally)
   - `/data/ste/venv/bin/python tests/test_output_names.py` — default ES/GES/STE output-stem compatibility (OK)
   - `/data/ste/venv/bin/python tests/test_gradient.py` — REINFORCE gradient vs exact enumeration (OK)
-  - `/data/ste/venv/bin/python tests/test_shaping.py` — SoftES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the ordinal-rank reference across sizes/ties (OK)
-  - `/data/ste/venv/bin/python tests/test_es_table.py` — SoftES perturbation-table sampler (OK)
-  - `/data/ste/venv/bin/python tests/test_ges.py` — GaussianES determinism/table-wraparound, known-noise numpy parity, streaming re-draw consistency, linear-fitness score unbiasedness vs the closed-form Phi gradient, SoftES shaping parity, grad-chunk parity, theta=0 diagnostics (OK)
+  - `/data/ste/venv/bin/python tests/test_shaping.py` — BES fitness shaping: none/standardize/rank utilities + update parity; argsort rank matches the ordinal-rank reference across sizes/ties (OK)
+  - `/data/ste/venv/bin/python tests/test_es_table.py` — BES perturbation-table sampler (OK)
+  - `/data/ste/venv/bin/python tests/test_ges.py` — GaussianES determinism/table-wraparound, known-noise numpy parity, streaming re-draw consistency, linear-fitness score unbiasedness vs the closed-form Phi gradient, BES shaping parity, grad-chunk parity, theta=0 diagnostics, theta clipping (OK)
   - `/data/ste/venv/bin/python tests/test_mga.py` — MicrobialGA pairing/tournament operators (OK)
   - `/data/ste/venv/bin/python tests/test_fitness.py` — BNNFitness batch schedules: cycle (mgab protocol) + random (OK)
   - `/data/ste/venv/bin/python tests/test_forward.py` — BNN forward/loss parity vs hand-rolled reference, fixed/he/none scale modes (pure TF, never imports larq; OK)
 - STE baseline: `cd /data/bes && TF_USE_LEGACY_KERAS=1 /data/ste/venv/bin/python experiments/run_ste.py [--epochs 25] [--batch-size 512] [--learning-rate 0.001] [--hidden 64] [--layers 1] [--scale none|fixed|he] [--eval-every N] [--optimizer sgd|adam] [--no-input-quant] [--use-bias] [--seed 42] [--out PATH]` (default result stems include lr, epochs, and batch size)
-- Soft ES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_es.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 0.1] [--shaping none|standardize|rank] [--bias-lr LR] [--adam] [--grad-chunk K] [--natural] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--scale fixed|he|none`, `--activation sign|relu`, `--chunk 8192` (sample chunk; GPU memory lever for wide nets — h1024 pop-100 needs `--chunk 1024` or 512)
+- BES: `cd /data/bes && /data/ste/venv/bin/python experiments/run_es.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 0.1] [--shaping none|standardize|rank] [--bias-lr LR] [--adam] [--grad-chunk K] [--natural] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--scale fixed|he|none`, `--activation sign|relu`, `--chunk 8192` (sample chunk; GPU memory lever for wide nets — h1024 pop-100 needs `--chunk 1024` or 512)
 - Gaussian ES (sign-quantized, `submission/gaussian-paper`): `cd /data/bes && /data/ste/venv/bin/python experiments/run_ges.py [--population 100] [--lr 0.1] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--table-rows 1024] [--antithetic] [--sigma 1.0] [--init-std 1.0] [--shaping none|standardize|rank] [--adam] [--grad-chunk K] [--out PATH]` plus `--hidden/--layers/--scale/--activation/--chunk/--pop-chunk/--diagnostics/--save-theta` (same semantics as run_es.py; no biases — weights-only, fitness gets `bias=None`)
 - Microbial GA: `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga.py [--population 100] [--deme 2] [--crossrate 0.5] [--mutation-rate 0.001] [--bias-std 0.01] [--iterations 300] [--fitness loss|accuracy] [--loss ce|hinge] [--fitness-batch 4096] [--eval-every 10] [--seed 42] [--scale fixed|he|none] [--out PATH]` plus `--hidden 64` (width), `--layers 1` (hidden depth), `--activation sign|relu`, `--chunk 8192`, `--pop-chunk 0`
 - MGA deme sweep (runner defaults reproduce mgab's exact recipe; for the Arc-1 archive use `--iterations 1000 --mutation-rate 1e-5 --bias-std 1e-5 --out-dir results/mga_sweep`): `cd /data/bes && /data/ste/venv/bin/python experiments/run_mga_sweep.py [--demelist 2,4,8,16,32,64,128,256] [--crossrates 0.5,1.0] [--seeds 0,1,2] [--population 256] [--fitness-batch 512] [--iterations 2000] [--mutation-rate 1e-4] [--bias-std 1.0] [--eval-every 10] [--eval-chunk 2048] [--scale fixed|he|none] [--activation sign|relu] [--resume] [--rerun-stale] [--out-dir results/mga_sweep_exact]`
@@ -290,7 +290,7 @@ listed in [`../results/README.md`](../results/README.md).
   theta dumping, and common CLI validation.
 - `experiments/_names.py`: shared default output-stem builders for `run_es.py`,
   `run_ges.py`, and `run_ste.py`.
-- `bes/algs/es.py`: SoftES — Bernoulli logit `p(z=+1) = sigmoid(theta)` over weight
+- `bes/algs/es.py`: BES — Bernoulli logit `p(z=+1) = sigmoid(theta)` over weight
   bits; continuous bias coordinates as Gaussian means `theta_bias` (fixed perturbation
   scale `sigma`; `sigma=0` disables bias learning — biases frozen at 0, update skips
   the bias gradient). REINFORCE with mean-fitness baseline, population-summed estimator
@@ -326,7 +326,7 @@ listed in [`../results/README.md`](../results/README.md).
   samples dominate), and shaping can't repair per-coordinate tails.
   Consistent with the Adam probe (square-root Fisher ≈ no gain): Fisher-
   style step scaling is not the bottleneck for this search distribution
-  (JSONs `..._nat_20261112_120254.json` / `..._nat_20261112_120422.json`). Streaming `SoftES.sample()` also binarises
+  (JSONs `..._nat_20261112_120254.json` / `..._nat_20261112_120422.json`). Streaming `BES.sample()` also binarises
   row-chunks of 128 now (bool population built incrementally; RNG stream
   changes for populations > 128, statistically equivalent) — pop-1000
   at h1024×1 runs OK with chunk 512 / grad-chunk 128 / pop-chunk 128.
@@ -366,7 +366,7 @@ listed in [`../results/README.md`](../results/README.md).
   measurable; the per-generation fitness signal, not step scaling, is the
   bottleneck (momentum's √k SNR argument pays only ~+0.3pp, within seed
   variance). Perturbation table pre-generated (circular; `table_rows=0` passed to
-  run_es means the legacy streaming sampler — inside SoftES `None` disables it, a
+  run_es means the legacy streaming sampler — inside BES `None` disables it, a
   literal `0` table crashes). Antithetic default off (consumes `ceil(P/2)`
   rows/generation, pairs `u` with `1-u`; bias pairs mirror around the mean).
   Fitness shaping (`shaping`, added 2026-11-11) replaces the raw advantage
@@ -385,16 +385,19 @@ listed in [`../results/README.md`](../results/README.md).
    the real antithetic gain is the variance reduction, not the normalization).
 - `bes/algs/ges.py`: GaussianES — continuous-latent search distribution for the
   gaussian-paper (added 2026-11-18): `theta in R^D` init from a zero-mean
-  Gaussian `N(0, init_std^2)` (exact sign(0) ties have measure zero; bits are
-  quantized as `x > 0`), each generation perturbs with isotropic Gaussian noise
+  Gaussian `N(0, init_std^2)` clipped to `[-1, 1]` (exact sign(0) ties have
+  measure zero; bits are quantized as `x > 0`), each generation perturbs with
+  isotropic Gaussian noise
   at a SHARED FIXED scale `sigma` (locked decision; no per-coordinate sigma),
   quantizes `sign(theta + sigma*eps)` and evaluates the same `BNNFitness`
   black box as the Bernoulli ES (weights-only, `bias=None`). REINFORCE score
   `(x - theta)/sigma^2 = eps/sigma` reduces to the sampling noise; update
   `theta += lr * sum_i u_i * eps_i / sigma` (population-summed convention,
-  score has unit per-coordinate variance vs SoftES's bounded `x - s`, so lr
-  units are comparable but tails heavier). The induced bit distribution is
-  Bernoulli with `p_j = Phi(theta_j / sigma)` — same family as SoftES under a
+  score has unit per-coordinate variance vs BES's bounded `x - s`, so lr
+  units are comparable but tails heavier), and both the init and each update
+  are clipped to `[-1, 1]^D` (the STE latent-weight box enforced by
+  `weight_clip`). The induced bit distribution is
+  Bernoulli with `p_j = Phi(theta_j / sigma)` — same family as BES under a
   monotone logit reparameterisation (good paper remark). Noise memory: the
   `(P, D)` float perturbations are needed again at update time, so they are
   NEVER materialized whole — `sample()`/`update()` replay the identical
@@ -403,21 +406,21 @@ listed in [`../results/README.md`](../results/README.md).
   `from_state` does not reproduce the stream, and raw consecutive seeds
   OVERLAP as philox counters — seed 1 = seed 0 shifted). Table mode
   (`table_rows>0`) pre-generates theta-independent standard-normal rows
-  (reusable at every theta like SoftES; update re-gathers the stored
+  (reusable at every theta like BES; update re-gathers the stored
   generation indices). Antithetic available, default off: pairs `eps`/`-eps`
   (bits are NOT complements unlike Bernoulli p=0.5; ceil(P/2) rows/gen, odd
-  P adds one unpaired tail). Shaping/adam/grad-chunk mirror SoftES (grad-chunk
+  P adds one unpaired tail). Shaping/adam/grad-chunk mirror BES (grad-chunk
   sub-chunks the multiply-reduce only — the noise stream is unchanged, so a
   grad-chunk run is bitwise-identical to the same run without it except fp
   summation order). Diagnostics: entropy/committed over the induced `p`,
   plus Gaussian-specific `flip_frac = E[Phi(-|theta|/sigma)]` (perturbation
   flip probability; the sigma-relative commitment measure); packed layout is
-  10 base scalars + 3 per layer (vs SoftES's 9 + 2). Smoke result (h64x1 relu
+  10 base scalars + 3 per layer (vs BES's 9 + 2). Smoke result (h64x1 relu
   he, p100, lr 1, sigma 1, 50 it): val 0.75, committed 66% @ it 50 — commits
   much faster than the Bernoulli ES at comparable lr; expect an lr sweep.
   Wide-net memory note: a (T, D) float32 table is ~T*D*4 bytes (h1024 D=813k:
   T=1024 table = 3.3 GB — use `--table-rows 0` streaming, same gotcha as
-  SoftES).
+  BES).
 - `bes/algs/mga.py`: MicrobialGA — persistent population (uniform Bernoulli 0.5 weight
   bits, zero biases) evolved by Harvey-style microbial tournaments (port of the PyTorch
   reference `/data/mgab`: ring-deme perfect matching via `pair()`, whole-population
@@ -428,7 +431,7 @@ listed in [`../results/README.md`](../results/README.md).
   matching; tournament losers are overwritten in place. Default eval candidate =
   current fitness argmax (`best_bits`/`best_bias`). RNG noise (init population,
   crossover mask, flip mask) is row-chunked now (`_bool_mask`, adaptive chunk
-  min(128, 1GB/(12·D)) — same rule as SoftES streaming sampling) so pop-1000 at
+  min(128, 1GB/(12·D)) — same rule as BES streaming sampling) so pop-1000 at
   h1024 doesn't OOM; RNG stream changes for wide/populations > chunk (statistically
   equivalent).
 - `bes/fitness.py`: `BNNFitness` batch schedules — `schedule="random"` (default,
@@ -487,7 +490,7 @@ listed in [`../results/README.md`](../results/README.md).
   ES/MGA tests, tests/test_forward.py) never imports larq and works fine
   either way.
 - Reproducibility: run scripts call `tf.keras.utils.set_random_seed(args.seed)`;
-  the SoftES/MicrobialGA own their TF generators, seeded from `seed`.
+  the BES/MicrobialGA own their TF generators, seeded from `seed`.
 - Fitness batch: `BNNFitness` draws a random batch without replacement per call
   (numpy rng, default `batch_size` 4096, clamped to dataset size). Evaluating the
   mode net goes through `mlp.population_metrics` on the full val/test set (as
@@ -498,7 +501,7 @@ listed in [`../results/README.md`](../results/README.md).
 - All algorithms maximise fitness; design decisions are locked in `DESIGN.md` and
   code is authoritative over `DESIGN.md` prose.
 - `__init__.py` files stay empty; imports use direct module paths
-  (`from bes.algs.es import SoftES`).
+  (`from bes.algs.es import BES`).
 
 ## References
 

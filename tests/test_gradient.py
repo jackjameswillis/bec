@@ -6,7 +6,7 @@ expected fitness under the Bernoulli(theta) distribution, and checks:
 1. the closed-form per-bit score ``(x - sigma(theta))`` against a numerical
    derivative of the exact expected fitness (population-summed analytic
    gradient == P * grad E[f]);
-2. ``SoftES.update`` on a constructed finite population matches the
+2. ``BES.update`` on a constructed finite population matches the
    population-summed estimator including the mean-fitness baseline and lr.
 """
 
@@ -20,7 +20,7 @@ import tensorflow as tf
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bes import mlp
-from bes.algs.es import SoftES
+from bes.algs.es import BES
 
 SHAPES = ((2, 2), (2, 2))
 
@@ -76,7 +76,7 @@ def main():
                       (all_bits.astype(np.float64) - s))).sum(axis=0)
     np.testing.assert_allclose(analytic_exact, numeric, rtol=1e-4, atol=1e-5)
 
-    es = SoftES(num_bits, pop_size := 5, p_init=0.5, seed=0)
+    es = BES(num_bits, pop_size := 5, p_init=0.5, seed=0)
     xs = all_bits[:pop_size].astype(np.float64)
     fs = fit[:pop_size]
     es.population = tf.convert_to_tensor(all_bits[:pop_size], dtype=tf.bool)
@@ -91,7 +91,7 @@ def main():
     np.testing.assert_allclose(delta_tf, delta_ref, rtol=1e-5, atol=1e-7)
 
     # 2b. continuous bias: Gaussian location-family REINFORCE step
-    es_b = SoftES(num_bits, pop_size, p_init=0.5, seed=0, num_bias=mlp.num_bias(2, 2, 2), sigma=0.25)
+    es_b = BES(num_bits, pop_size, p_init=0.5, seed=0, num_bias=mlp.num_bias(2, 2, 2), sigma=0.25)
     es_b.population = tf.convert_to_tensor(all_bits[:pop_size], dtype=tf.bool)
     es_b.fitness = tf.convert_to_tensor(fs.astype("float32"))
     es_b.bias = tf.convert_to_tensor(np.random.default_rng(11).normal(size=(pop_size, mlp.num_bias(2, 2, 2))).astype("float32"), tf.float32)
